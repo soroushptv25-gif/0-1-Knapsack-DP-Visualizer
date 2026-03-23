@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>0/1 Knapsack — Dynamic Programming Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --bg2: #0f1219;
+    --bg3: #151a24;
+    --bg4: #1c2333;
+    --border: #252e40;
+    --border2: #2e3a52;
+    --text: #e2e8f0;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --accent: #38bdf8;
+    --accent2: #0ea5e9;
+    --green: #22c55e;
+    --green2: #16a34a;
+    --red: #f43f5e;
+    --red2: #be123c;
+    --yellow: #fbbf24;
+    --yellow2: #d97706;
+    --purple: #a78bfa;
+    --purple2: #7c3aed;
+    --orange: #fb923c;
+    --teal: #2dd4bf;
+    --cell-empty: #1c2333;
+    --cell-active: #0c3a5c;
+    --cell-filled: #0f3d2e;
+    --cell-traceback: #3d1f0a;
+    --cell-optimal: #1a3a1a;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0a0c10 0%, #0f1a2e 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  header h1 { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; }
+  header h1 span { color: var(--accent); }
+  .header-badge {
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--text2);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Layout ── */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 57px);
+  }
+  @media (max-width: 980px) {
+    .main-layout { grid-template-columns: 1fr; }
+  }
+
+  /* ── Left Panel ── */
+  .left-panel {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+
+  .panel-section {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .panel-section-header {
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text2);
+    background: var(--bg4);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-section-header .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+  }
+  .panel-body { padding: 14px; }
+
+  /* Status bar */
+  .status-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+  }
+  .status-indicator {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700;
+  }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text3);
+    transition: background 0.3s;
+  }
+  .status-dot.idle { background: var(--text3); }
+  .status-dot.ready { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .status-dot.playing { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1s infinite; }
+  .status-dot.paused { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .status-dot.done { background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .step-counter { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text2); }
+
+  /* Input */
+  label { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 5px; }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus { border-color: var(--accent); }
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .cap-row { margin-bottom: 10px; }
+
+  /* Preset buttons */
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .preset-btn {
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 5px 10px;
+    color: var(--text2);
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .preset-btn:hover { background: var(--bg3); border-color: var(--accent); color: var(--accent); }
+
+  /* Speed slider */
+  .speed-row { display: flex; align-items: center; gap: 10px; }
+  input[type="range"] {
+    flex: 1; -webkit-appearance: none;
+    height: 4px; background: var(--border2);
+    border-radius: 2px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    background: var(--accent); border-radius: 50%; cursor: pointer;
+  }
+  .speed-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); min-width: 36px; text-align: right; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn {
+    flex: 1; min-width: 60px;
+    padding: 8px 6px;
+    border-radius: 7px;
+    border: 1px solid var(--border2);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .btn-primary { background: var(--accent2); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent); box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+  .btn-secondary { background: var(--bg4); color: var(--text2); }
+  .btn-secondary:hover { background: var(--bg3); border-color: var(--text2); color: var(--text); }
+  .btn-green { background: var(--green2); border-color: var(--green); color: #fff; }
+  .btn-green:hover { background: var(--green); box-shadow: 0 0 12px rgba(34,197,94,0.3); }
+  .btn-yellow { background: #92400e; border-color: var(--yellow); color: var(--yellow); }
+  .btn-yellow:hover { background: #7c3a0a; }
+  .btn-red { background: var(--red2); border-color: var(--red); color: #fff; }
+  .btn-red:hover { background: var(--red); }
+  .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-box {
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+  .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; color: var(--accent); }
+  .stat-value.green { color: var(--green); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-value.purple { color: var(--purple); }
+
+  /* Step explanation */
+  .explanation-box {
+    background: var(--bg4);
+    border: 1px solid var(--border2);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text);
+    min-height: 64px;
+  }
+  .explanation-box .em { color: var(--accent); font-weight: 700; }
+  .explanation-box .pos { color: var(--green); font-weight: 700; }
+  .explanation-box .neg { color: var(--red); font-weight: 700; }
+
+  /* History table */
+  .history-wrap { max-height: 200px; overflow-y: auto; }
+  .history-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .history-table th { background: var(--bg4); padding: 5px 8px; text-align: left; color: var(--text3); font-weight: 700; letter-spacing: 0.05em; font-size: 10px; border-bottom: 1px solid var(--border); position: sticky; top: 0; }
+  .history-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; cursor: pointer; transition: background 0.15s; }
+  .history-table tr:hover td { background: var(--bg4); }
+  .history-table tr.active-row td { background: rgba(56,189,248,0.1); color: var(--accent); }
+  .tag-fill { background: rgba(34,197,94,0.2); color: var(--green); border-radius: 3px; padding: 1px 5px; font-size: 10px; }
+  .tag-skip { background: rgba(100,116,139,0.2); color: var(--text3); border-radius: 3px; padding: 1px 5px; font-size: 10px; }
+  .tag-trace { background: rgba(251,191,36,0.2); color: var(--yellow); border-radius: 3px; padding: 1px 5px; font-size: 10px; }
+
+  /* ── Right Panel ── */
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    overflow-y: auto;
+  }
+
+  .viz-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px;
+    flex-wrap: wrap;
+  }
+  .viz-header h2 { font-size: 13px; font-weight: 700; color: var(--text2); }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text3); }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); }
+  .swatch-empty { background: var(--cell-empty); }
+  .swatch-active { background: var(--cell-active); border-color: var(--accent); }
+  .swatch-include { background: var(--cell-filled); border-color: var(--green); }
+  .swatch-traceback { background: var(--cell-traceback); border-color: var(--yellow); }
+  .swatch-optimal { background: var(--cell-optimal); border-color: var(--green); }
+  .swatch-selected { background: rgba(167,139,250,0.3); border-color: var(--purple); }
+
+  /* Tabs */
+  .viz-tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .tab-btn {
+    padding: 10px 18px;
+    border: none; background: transparent;
+    color: var(--text3); font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 11px; letter-spacing: 0.05em;
+    text-transform: uppercase; cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover { color: var(--text2); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Tab content areas */
+  .tab-content { display: none; flex: 1; }
+  .tab-content.active { display: flex; flex-direction: column; }
+
+  /* DP Visualization */
+  .dp-viz-area {
+    flex: 1;
+    padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  .viz-two-col {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 16px;
+    flex: 1;
+  }
+
+  /* DP Table SVG container */
+  .dp-table-wrap {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: auto;
+    position: relative;
+  }
+  #dp-svg { display: block; }
+
+  /* Items panel */
+  .items-panel {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex; flex-direction: column; gap: 10px;
+    overflow-y: auto;
+    max-height: 420px;
+  }
+  .items-panel-title { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.07em; }
+
+  .item-box {
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .item-box::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--border2);
+    transition: background 0.3s;
+  }
+  .item-box.selected { border-color: var(--green); background: rgba(34,197,94,0.08); }
+  .item-box.selected::before { background: var(--green); }
+  .item-box.glow { box-shadow: 0 0 16px rgba(34,197,94,0.3); }
+  .item-box.current { border-color: var(--accent); background: rgba(56,189,248,0.08); }
+  .item-box.current::before { background: var(--accent); }
+  .item-box-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .item-name { font-weight: 700; font-size: 12px; }
+  .item-ratio { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--yellow); }
+  .item-tags { display: flex; gap: 6px; }
+  .item-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 2px 7px; border-radius: 4px; }
+  .tag-w { background: rgba(56,189,248,0.15); color: var(--accent); }
+  .tag-v { background: rgba(34,197,94,0.15); color: var(--green); }
+  .selected-badge { font-size: 9px; font-weight: 700; color: var(--green); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* Knapsack summary */
+  .knapsack-summary {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+  .ks-stat { text-align: center; }
+  .ks-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: var(--accent); }
+  .ks-stat-val.gold { color: var(--yellow); }
+  .ks-stat-val.green { color: var(--green); }
+  .ks-stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; }
+  .ks-divider { width: 1px; height: 40px; background: var(--border); }
+
+  /* Pseudocode */
+  .pseudo-wrap {
+    flex: 1; padding: 16px 20px;
+    display: flex; gap: 16px;
+  }
+  .pseudo-panel {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    flex: 1;
+    display: flex; flex-direction: column;
+  }
+  .pseudo-header {
+    padding: 10px 14px;
+    background: var(--bg4);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 700; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 0.07em;
+  }
+  .pseudo-body { overflow-y: auto; padding: 8px 0; flex: 1; max-height: 380px; }
+  .pseudo-line {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 3px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    transition: background 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .pseudo-line:hover { background: var(--bg4); }
+  .pseudo-line.highlighted { background: rgba(56,189,248,0.15); border-left: 2px solid var(--accent); }
+  .pseudo-line .ln { color: var(--text3); min-width: 24px; text-align: right; user-select: none; }
+  .pseudo-line .code { color: var(--text); line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+  .pseudo-line .code .kw { color: var(--accent); }
+  .pseudo-line .code .fn { color: var(--yellow); }
+  .pseudo-line .code .cm { color: var(--text3); }
+  .pseudo-line .code .num { color: var(--purple); }
+  .pseudo-tooltip {
+    display: none;
+    position: absolute; left: 100%; top: 0;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--text2);
+    width: 220px; z-index: 50;
+    box-shadow: var(--shadow);
+    pointer-events: none;
+  }
+  .pseudo-line:hover .pseudo-tooltip { display: block; }
+
+  /* CLO badges */
+  .clo-badge { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
+  .clo1 { background: rgba(56,189,248,0.2); color: var(--accent); border: 1px solid var(--accent); }
+  .clo2 { background: rgba(251,191,36,0.2); color: var(--yellow); border: 1px solid var(--yellow); }
+  .clo3 { background: rgba(167,139,250,0.2); color: var(--purple); border: 1px solid var(--purple); }
+
+  /* Brute force & CLO1 */
+  .bf-viz-area { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+  #bf-svg-wrap { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; overflow: auto; }
+  #bf-svg { display: block; }
+
+  /* Educational content */
+  .edu-area { flex: 1; padding: 20px; overflow-y: auto; }
+  .edu-section { margin-bottom: 20px; }
+  .collapsible-header {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+    font-weight: 700; transition: all 0.2s;
+  }
+  .collapsible-header:hover { border-color: var(--accent); }
+  .collapsible-header .arrow { transition: transform 0.3s; color: var(--text3); }
+  .collapsible-header.open .arrow { transform: rotate(180deg); }
+  .collapsible-body {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 16px;
+    display: none;
+    line-height: 1.7; color: var(--text2); font-size: 13px;
+  }
+  .collapsible-body.open { display: block; }
+  .concept-box {
+    background: var(--bg4); border: 1px solid var(--border2);
+    border-left: 3px solid var(--purple);
+    border-radius: 6px; padding: 12px 14px;
+    margin: 10px 0; font-size: 12px; color: var(--text2);
+  }
+  .concept-box.warning { border-left-color: var(--red); }
+  .concept-box.tip { border-left-color: var(--green); }
+  .concept-box strong { color: var(--text); }
+  .worked-step {
+    background: var(--bg4); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; margin: 8px 0;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .worked-step-num {
+    background: var(--accent2); color: #fff;
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px; flex-shrink: 0;
+  }
+  .worked-step-text { font-size: 12px; color: var(--text2); line-height: 1.6; }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg); padding: 1px 5px; border-radius: 3px;
+    color: var(--accent); font-size: 11px;
+  }
+
+  /* CLO3: Greedy contrast */
+  .greedy-wrap { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .greedy-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .greedy-panel {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 14px;
+  }
+  .greedy-panel-title { font-size: 12px; font-weight: 700; margin-bottom: 10px; }
+  .greedy-panel-title.bad { color: var(--red); }
+  .greedy-panel-title.good { color: var(--green); }
+  #greedy-svg-wrap { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg2); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+  .formula-box {
+    background: var(--bg4); border: 1px solid var(--border2);
+    border-radius: 8px; padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--text); line-height: 1.8;
+  }
+  .formula-box .var { color: var(--accent); }
+  .formula-box .val { color: var(--green); }
+  .formula-box .op { color: var(--yellow); }
+
+  .complexity-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .complexity-box { background: var(--bg4); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+  .complexity-big { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .complexity-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; }
+
+  #ratio-sort-viz { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+
+  .no-items-msg { color: var(--text3); font-size: 12px; text-align: center; padding: 20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>0/1 Knapsack <span>DP Visualizer</span></h1>
+  <div class="header-badge">CLO-1 · CLO-2 · CLO-3</div>
+</header>
+
+<div class="main-layout">
+
+  <!-- ══ LEFT PANEL ══ -->
+  <div class="left-panel">
+
+    <!-- Status -->
+    <div class="panel-section">
+      <div class="status-bar">
+        <div class="status-indicator">
+          <div class="status-dot idle" id="status-dot"></div>
+          <span id="status-text">Idle</span>
+        </div>
+        <div class="step-counter" id="step-counter">Step 0 / 0</div>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot"></div>Input</div>
+      <div class="panel-body">
+        <div class="input-row">
+          <div>
+            <label>Weights (comma-separated)</label>
+            <input type="text" id="inp-weights" value="2,3,4,5" placeholder="e.g. 2,3,4,5">
+          </div>
+          <div>
+            <label>Values (comma-separated)</label>
+            <input type="text" id="inp-values" value="3,4,5,6" placeholder="e.g. 3,4,5,6">
+          </div>
+        </div>
+        <div class="cap-row">
+          <label>Knapsack Capacity (W)</label>
+          <input type="number" id="inp-capacity" value="5" min="1" max="30">
+        </div>
+        <div class="presets">
+          <button class="preset-btn" onclick="loadPreset(0)">📦 Classic 4-item</button>
+          <button class="preset-btn" onclick="loadPreset(1)">⚠️ Greedy Fails</button>
+          <button class="preset-btn" onclick="loadPreset(2)">🎯 Tight Fit</button>
+          <button class="preset-btn" onclick="loadPreset(3)">🧮 Larger Set</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Speed -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot" style="background:var(--yellow)"></div>Speed</div>
+      <div class="panel-body">
+        <div class="speed-row">
+          <span style="font-size:11px;color:var(--text3)">0.25×</span>
+          <input type="range" id="speed-slider" min="1" max="16" value="4" step="1">
+          <span style="font-size:11px;color:var(--text3)">4×</span>
+          <span class="speed-label" id="speed-label">1×</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot" style="background:var(--green)"></div>Playback</div>
+      <div class="panel-body">
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-build" onclick="buildSteps()">Build Steps</button>
+          <button class="btn btn-secondary" id="btn-step" onclick="stepOnce()" disabled>Step</button>
+          <button class="btn btn-green" id="btn-play" onclick="play()" disabled>▶ Play</button>
+          <button class="btn btn-yellow" id="btn-pause" onclick="pause()" disabled>⏸ Pause</button>
+          <button class="btn btn-red" id="btn-reset" onclick="reset()">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot" style="background:var(--purple)"></div>Statistics</div>
+      <div class="panel-body">
+        <div class="stats-grid">
+          <div class="stat-box"><div class="stat-label">Cell Computations</div><div class="stat-value" id="stat-ops">0</div></div>
+          <div class="stat-box"><div class="stat-label">Include Decisions</div><div class="stat-value green" id="stat-includes">0</div></div>
+          <div class="stat-box"><div class="stat-label">Skip Decisions</div><div class="stat-value yellow" id="stat-skips">0</div></div>
+          <div class="stat-box"><div class="stat-label">Optimal Value</div><div class="stat-value purple" id="stat-optimal">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Explanation -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot" style="background:var(--orange)"></div>Step Explanation</div>
+      <div class="panel-body">
+        <div class="explanation-box" id="explanation">Press <strong>Build Steps</strong> to initialize, then <strong>Play</strong> or <strong>Step</strong> through the algorithm.</div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot" style="background:var(--teal)"></div>Step History</div>
+      <div class="panel-body" style="padding:8px 0 0 0">
+        <div class="history-wrap">
+          <table class="history-table">
+            <thead><tr><th>#</th><th>i</th><th>w</th><th>Action</th><th>Value</th></tr></thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <!-- ══ END LEFT PANEL ══ -->
+
+  <!-- ══ RIGHT PANEL ══ -->
+  <div class="right-panel">
+
+    <!-- Tabs -->
+    <div class="viz-tabs">
+      <button class="tab-btn active" onclick="switchTab('dp')">DP Table</button>
+      <button class="tab-btn" onclick="switchTab('bf')">Brute Force (CLO-1)</button>
+      <button class="tab-btn" onclick="switchTab('clo2')">Ratio Sort (CLO-2)</button>
+      <button class="tab-btn" onclick="switchTab('clo3')">Greedy vs DP (CLO-3)</button>
+      <button class="tab-btn" onclick="switchTab('edu')">📖 Learn</button>
+    </div>
+
+    <!-- TAB: DP -->
+    <div class="tab-content active" id="tab-dp">
+      <div style="padding:10px 20px 0; border-bottom:1px solid var(--border);">
+        <div class="legend">
+          <div class="legend-item"><div class="legend-swatch swatch-empty"></div>Uncomputed</div>
+          <div class="legend-item"><div class="legend-swatch swatch-active"></div>Computing Now</div>
+          <div class="legend-item"><div class="legend-swatch swatch-include"></div>Include Item</div>
+          <div class="legend-item"><div class="legend-swatch swatch-traceback"></div>Traceback Path</div>
+          <div class="legend-item"><div class="legend-swatch swatch-optimal"></div>Filled</div>
+          <div class="legend-item"><div class="legend-swatch swatch-selected"></div>Selected Item</div>
+        </div>
+      </div>
+      <div class="dp-viz-area">
+        <div class="viz-two-col" style="flex:1">
+          <div class="dp-table-wrap" id="dp-table-wrap">
+            <svg id="dp-svg"></svg>
+          </div>
+          <div class="items-panel">
+            <div class="items-panel-title">Items</div>
+            <div id="items-list"><div class="no-items-msg">Build steps to see items</div></div>
+          </div>
+        </div>
+        <div class="knapsack-summary" id="ks-summary">
+          <div class="ks-stat"><div class="ks-stat-val" id="ks-n">—</div><div class="ks-stat-label">Items</div></div>
+          <div class="ks-divider"></div>
+          <div class="ks-stat"><div class="ks-stat-val" id="ks-W">—</div><div class="ks-stat-label">Capacity</div></div>
+          <div class="ks-divider"></div>
+          <div class="ks-stat"><div class="ks-stat-val gold" id="ks-optval">—</div><div class="ks-stat-label">Optimal Value</div></div>
+          <div class="ks-divider"></div>
+          <div class="ks-stat"><div class="ks-stat-val green" id="ks-items-taken">—</div><div class="ks-stat-label">Items Taken</div></div>
+          <div class="ks-divider"></div>
+          <div class="ks-stat"><div class="ks-stat-val" id="ks-complexity">—</div><div class="ks-stat-label">DP Complexity</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Brute Force -->
+    <div class="tab-content" id="tab-bf">
+      <div class="bf-viz-area">
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div class="complexity-box" style="flex:1">
+            <div class="complexity-big" style="color:var(--red)">O(2ⁿ)</div>
+            <div class="complexity-label">Brute Force</div>
+          </div>
+          <div class="complexity-box" style="flex:1">
+            <div class="complexity-big" style="color:var(--green)">O(nW)</div>
+            <div class="complexity-label">DP Solution</div>
+          </div>
+          <div class="complexity-box" style="flex:2">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">For n=20, W=100:</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:13px">
+              BF: <span style="color:var(--red)" id="bf-ops-count">1,048,576 ops</span><br>
+              DP: <span style="color:var(--green)" id="dp-ops-count">2,000 ops</span>
+            </div>
+          </div>
+        </div>
+        <div id="bf-svg-wrap">
+          <svg id="bf-svg" width="760" height="320"></svg>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:12px;color:var(--text2);line-height:1.7">
+          <strong style="color:var(--text)">Decision Tree for Brute Force:</strong> At each node, we decide to INCLUDE (left) or EXCLUDE (right) the current item. 
+          The tree has depth n, generating <strong style="color:var(--red)">2ⁿ leaf nodes</strong>. For n=4 shown above, that's 16 subsets. 
+          DP avoids this by reusing subproblem solutions — <strong style="color:var(--green)">pseudo-polynomial O(nW)</strong>.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: CLO2 Ratio Sort -->
+    <div class="tab-content" id="tab-clo2">
+      <div style="flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.07em">CLO-2: Value/Weight Ratio Sort — Initial Greedy Intuition</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+            A natural first approach: sort items by <code>value/weight</code> ratio (most "efficient" first). 
+            This works for the <em>fractional</em> knapsack but can <strong style="color:var(--red)">fail for 0/1</strong>.
+            After filling the DP table, we trace back using this sorted order to understand the optimal solution.
+          </div>
+          <div id="ratio-sort-viz"></div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.07em">DP Traceback Search</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+            After building the DP table, we trace back from <code>K[n][W]</code> to find which items were selected.
+            At each cell <code>K[i][w]</code>: if <code>K[i][w] ≠ K[i-1][w]</code>, item i was included — move to <code>K[i-1][w-wᵢ]</code>.
+            Otherwise, skip item i and move to <code>K[i-1][w]</code>.
+          </div>
+          <svg id="traceback-svg" width="700" height="180"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: CLO3 Greedy vs DP -->
+    <div class="tab-content" id="tab-clo3">
+      <div class="greedy-wrap">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:12px;font-weight:700;margin-bottom:6px">CLO-3: Counterexample Where Greedy Fails</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">
+            Items: <code>w=[3,4,5]</code>, <code>v=[4,5,6]</code>, Capacity <code>W=7</code>.<br>
+            Ratios: A=1.33, B=1.25, C=1.20 → Greedy picks A (w=3,v=4) + B (w=4,v=5) → Total: <span style="color:var(--red)">w=7, v=9</span>.<br>
+            DP finds: B (w=4,v=5) + C (w=5...) — wait, let's pick A+C: w=8 > 7. So greedy is correct here. Let's use the built-in counterexample (Preset 2).
+          </div>
+        </div>
+        <div class="greedy-compare">
+          <div class="greedy-panel">
+            <div class="greedy-panel-title bad">❌ Greedy (by ratio) Result</div>
+            <div id="greedy-result-bad" style="font-size:12px;color:var(--text2)">Build steps first.</div>
+          </div>
+          <div class="greedy-panel">
+            <div class="greedy-panel-title good">✅ DP Optimal Result</div>
+            <div id="greedy-result-good" style="font-size:12px;color:var(--text2)">Build steps first.</div>
+          </div>
+        </div>
+        <div id="greedy-svg-wrap">
+          <svg id="greedy-svg" width="760" height="260"></svg>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">DP Include/Exclude Recurrence</div>
+          <div class="formula-box">
+            <span class="var">K[i][w]</span> <span class="op">=</span> <br>
+            &nbsp;&nbsp;<span class="op">if</span> w<sub>i</sub> <span class="op">></span> w: &nbsp;&nbsp;&nbsp;<span class="var">K[i-1][w]</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:var(--text3)">// can't include item i</span><br>
+            &nbsp;&nbsp;<span class="op">else:</span> &nbsp;&nbsp;&nbsp;<span class="op">max</span>( <span class="var">K[i-1][w]</span>, <span class="val">v<sub>i</sub></span> <span class="op">+</span> <span class="var">K[i-1][w-w<sub>i</sub>]</span> ) &nbsp;&nbsp;<span style="color:var(--text3)">// exclude vs include</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Educational -->
+    <div class="tab-content" id="tab-edu">
+      <div class="edu-area">
+        <div class="edu-section">
+          <div class="collapsible-header open" onclick="toggleCollapsible(this)">
+            <span>📚 Algorithm Overview</span><span class="arrow">▼</span>
+          </div>
+          <div class="collapsible-body open">
+            <p>The <strong>0/1 Knapsack Problem</strong> asks: given n items each with weight wᵢ and value vᵢ, and a knapsack of capacity W, which items should you take to maximize total value without exceeding capacity? Each item is either fully taken (1) or not (0) — you cannot take fractions.</p>
+            <div class="complexity-row">
+              <div class="complexity-box"><div class="complexity-big" style="color:var(--red)">O(2ⁿ)</div><div class="complexity-label">Brute Force</div></div>
+              <div class="complexity-box"><div class="complexity-big" style="color:var(--green)">O(nW)</div><div class="complexity-label">Dynamic Programming</div></div>
+            </div>
+            <div class="concept-box" style="margin-top:12px">
+              <strong>Why DP works:</strong> This problem has <em>optimal substructure</em> — the optimal solution to K[i][w] depends only on K[i-1][w] and K[i-1][w-wᵢ]. It also has <em>overlapping subproblems</em> — the same (i,w) pairs would be recomputed many times in recursion.
+            </div>
+            <div class="concept-box warning">
+              <strong>Pseudo-polynomial:</strong> O(nW) is not truly polynomial because W can be exponentially large as a binary number. If W = 2ⁿ, DP is no better than brute force. That's why this is "pseudo-polynomial."
+            </div>
+          </div>
+        </div>
+
+        <div class="edu-section">
+          <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <span>🔍 Worked Example</span><span class="arrow">▼</span>
+          </div>
+          <div class="collapsible-body">
+            <p style="margin-bottom:10px">Items: {A: w=2,v=3}, {B: w=3,v=4}, {C: w=4,v=5}, {D: w=5,v=6}. Capacity W=5.</p>
+            <div class="worked-step">
+              <div class="worked-step-num">1</div>
+              <div class="worked-step-text">Initialize <code>K[0][w] = 0</code> for all w (no items, no value). Row 0 is the base case.</div>
+            </div>
+            <div class="worked-step">
+              <div class="worked-step-num">2</div>
+              <div class="worked-step-text">Item A (w=2, v=3): For w&lt;2, can't include → <code>K[1][w]=K[0][w]=0</code>. For w≥2: <code>max(K[0][w], 3+K[0][w-2]) = max(0, 3) = 3</code>.</div>
+            </div>
+            <div class="worked-step">
+              <div class="worked-step-num">3</div>
+              <div class="worked-step-text">Item B (w=3, v=4): At w=5: <code>max(K[1][5], 4+K[1][2]) = max(3, 4+3) = 7</code>. Items A+B fit! Value 7.</div>
+            </div>
+            <div class="worked-step">
+              <div class="worked-step-num">4</div>
+              <div class="worked-step-text">Traceback from <code>K[4][5]=7</code>: K[4][5]=K[3][5]? No → D excluded. K[3][5]=K[2][5]? No → C excluded. K[2][5]=K[1][5]? 7≠3 → B included, move to K[1][2]. K[1][2]=K[0][2]? 3≠0 → A included.</div>
+            </div>
+            <div class="worked-step">
+              <div class="worked-step-num">5</div>
+              <div class="worked-step-text">Selected: A (w=2,v=3) + B (w=3,v=4). Total weight=5=W. Total value=7. ✅ Optimal!</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="edu-section">
+          <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <span>💡 Key Concepts</span><span class="arrow">▼</span>
+          </div>
+          <div class="collapsible-body">
+            <div class="concept-box"><strong>Optimal Substructure:</strong> The optimal solution to K[i][w] can be built from optimal solutions to smaller subproblems — either K[i-1][w] (skip item i) or K[i-1][w-wᵢ]+vᵢ (take item i).</div>
+            <div class="concept-box"><strong>Overlapping Subproblems:</strong> Without memoization, a recursive approach recomputes K[i][w] exponentially many times. DP fills each cell exactly once.</div>
+            <div class="concept-box tip"><strong>Traceback:</strong> The DP table stores values, not decisions. To find which items were chosen, we trace back from K[n][W], checking at each step whether the value came from including or excluding the item.</div>
+            <div class="concept-box warning"><strong>Common Mistake:</strong> Confusing 0/1 Knapsack with Fractional Knapsack. Greedy (ratio sort) works for fractional but NOT for 0/1. Always countercheck with the DP result.</div>
+            <div class="concept-box"><strong>Space Optimization:</strong> Since row i only depends on row i-1, you can reduce space to O(W) by using a 1D rolling array (iterate w in reverse).</div>
+          </div>
+        </div>
+
+        <div class="edu-section">
+          <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <span>📊 Pseudocode &amp; Recurrence</span><span class="arrow">▼</span>
+          </div>
+          <div class="collapsible-body">
+            <div class="formula-box" style="line-height:2">
+              <span class="op">function</span> <span style="color:var(--yellow)">KnapsackDP</span>(weights, values, W, n):<br>
+              &nbsp;&nbsp;<span class="op">for</span> <span class="var">i</span> <span class="op">in</span> 0..n, <span class="var">w</span> <span class="op">in</span> 0..W: K[i][w] = 0<br>
+              &nbsp;&nbsp;<span class="op">for</span> <span class="var">i</span> = 1 to n:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="op">for</span> <span class="var">w</span> = 0 to W:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">if</span> weights[i] &gt; w:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;K[i][w] = K[i-1][w]<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">else</span>:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;K[i][w] = <span class="op">max</span>(K[i-1][w], values[i] + K[i-1][w-weights[i]])<br>
+              &nbsp;&nbsp;<span class="op">return</span> K[n][W]
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pseudocode always visible at bottom of DP tab -->
+
+  </div>
+</div>
+
+<!-- Pseudocode overlay (shown in DP tab, fixed at bottom right) -->
+<div id="pseudo-overlay" style="display:none;position:fixed;bottom:20px;right:20px;width:320px;z-index:200">
+  <div class="pseudo-panel" style="max-height:320px">
+    <div class="pseudo-header" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Pseudocode</span>
+      <button onclick="document.getElementById('pseudo-overlay').style.display='none'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px">×</button>
+    </div>
+    <div class="pseudo-body" id="pseudo-body"></div>
+  </div>
+</div>
+<button onclick="document.getElementById('pseudo-overlay').style.display='block'" id="pseudo-toggle" style="display:none;position:fixed;bottom:20px;right:20px;z-index:201;background:var(--bg4);border:1px solid var(--border2);color:var(--accent);font-family:'Syne',sans-serif;font-weight:700;font-size:11px;padding:8px 14px;border-radius:20px;cursor:pointer;">{ } Pseudocode</button>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  DATA & STATE
+// ══════════════════════════════════════════════════════════════
+
+const PRESETS = [
+  { weights:[2,3,4,5], values:[3,4,5,6], W:5, label:"Classic 4-item" },
+  { weights:[1,2,3],   values:[6,10,12], W:5, label:"Greedy Fails (v/w misleads)" },
+  { weights:[4,3,2,3], values:[5,4,3,3], W:6, label:"Tight Fit" },
+  { weights:[2,4,6,7], values:[3,6,9,10], W:11, label:"Larger Set" },
+];
+
+let state = {
+  items: [],   // [{w,v,name,ratio}]
+  W: 0, n: 0,
+  K: [],       // (n+1) x (W+1) DP table
+  steps: [],   // list of step objects
+  stepIdx: -1,
+  playing: false,
+  playTimer: null,
+  status: 'idle',
+  stats: { ops:0, includes:0, skips:0 },
+  history: [],
+  selectedItems: new Set(),
+  cellState: [], // 'empty','computing','filled','traceback','optimal'
+};
+
+// ══════════════════════════════════════════════════════════════
+//  PRESETS & INPUT
+// ══════════════════════════════════════════════════════════════
+function loadPreset(i) {
+  const p = PRESETS[i];
+  document.getElementById('inp-weights').value = p.weights.join(',');
+  document.getElementById('inp-values').value  = p.values.join(',');
+  document.getElementById('inp-capacity').value = p.W;
+  reset();
+}
+
+function parseInput() {
+  const ws = document.getElementById('inp-weights').value.split(',').map(x=>parseInt(x.trim())).filter(x=>!isNaN(x)&&x>0);
+  const vs = document.getElementById('inp-values').value.split(',').map(x=>parseInt(x.trim())).filter(x=>!isNaN(x)&&x>0);
+  const W  = parseInt(document.getElementById('inp-capacity').value);
+  if (!ws.length || !vs.length || isNaN(W) || W<=0) return null;
+  const n = Math.min(ws.length, vs.length);
+  return { weights: ws.slice(0,n), values: vs.slice(0,n), W, n };
+}
+
+// ══════════════════════════════════════════════════════════════
+//  STEP GENERATION
+// ══════════════════════════════════════════════════════════════
+function buildSteps() {
+  const inp = parseInput();
+  if (!inp) { setExplanation('<span class="neg">Invalid input!</span> Please check weights, values, and capacity.'); return; }
+
+  const { weights, values, W, n } = inp;
+  state.W = W; state.n = n;
+  state.items = weights.map((w,i) => ({
+    w, v: values[i],
+    name: `Item ${i+1}`,
+    ratio: (values[i]/w).toFixed(2)
+  }));
+
+  // Build DP table
+  const K = Array.from({length:n+1}, () => new Array(W+1).fill(0));
+  for (let i=1;i<=n;i++)
+    for (let w=0;w<=W;w++)
+      K[i][w] = (weights[i-1]>w) ? K[i-1][w] : Math.max(K[i-1][w], values[i-1]+K[i-1][w-weights[i-1]]);
+  state.K = K;
+
+  // Generate steps
+  const steps = [];
+
+  // Init step
+  steps.push({ type:'init', desc:`Initialize DP table K[0..${n}][0..${W}] with zeros. Base case: 0 items = 0 value.`, pseudo:0, i:0, w:0 });
+
+  // Fill steps
+  for (let i=1;i<=n;i++) {
+    const item = state.items[i-1];
+    steps.push({ type:'item-start', i, desc:`Processing <span class="em">Item ${i}</span> (weight=${item.w}, value=${item.v}, ratio=${item.ratio})`, pseudo:1, w:-1 });
+    for (let w=0;w<=W;w++) {
+      if (weights[i-1] > w) {
+        steps.push({
+          type:'skip',
+          i, w,
+          desc:`<span class="em">K[${i}][${w}]</span>: weight=${item.w} > capacity=${w} → <span class="neg">Cannot include</span> Item ${i}. K[${i}][${w}] = K[${i-1}][${w}] = <span class="pos">${K[i][w]}</span>`,
+          val: K[i][w],
+          pseudo:2, action:'skip'
+        });
+      } else {
+        const skip_val = K[i-1][w];
+        const inc_val  = values[i-1] + K[i-1][w-weights[i-1]];
+        const chosen = inc_val > skip_val ? 'include' : 'skip';
+        steps.push({
+          type: chosen === 'include' ? 'include' : 'noinclude',
+          i, w,
+          desc: `<span class="em">K[${i}][${w}]</span>: skip=${skip_val}, include=${values[i-1]}+K[${i-1}][${w-weights[i-1]}]=${inc_val}. ` +
+                (chosen==='include'
+                  ? `<span class="pos">Include</span> Item ${i}! max=${K[i][w]}`
+                  : `<span class="neg">Exclude</span> Item ${i}. max=${K[i][w]}`),
+          val: K[i][w], skip_val, inc_val,
+          pseudo: chosen==='include'?4:3, action: chosen
+        });
+      }
+    }
+  }
+
+  // Optimal value step
+  steps.push({ type:'optimal', i:n, w:W, desc:`DP complete! Optimal value = <span class="pos">${K[n][W]}</span> at K[${n}][${W}].`, pseudo:5, val:K[n][W] });
+
+  // Traceback steps
+  let ci=n, cw=W;
+  const selected = new Set();
+  while (ci>0 && cw>0) {
+    if (K[ci][cw] === K[ci-1][cw]) {
+      steps.push({ type:'traceback-skip', i:ci, w:cw, desc:`Traceback: K[${ci}][${cw}]=${K[ci][cw]} = K[${ci-1}][${cw}]=${K[ci-1][cw]} → <span class="neg">Item ${ci} was NOT taken</span>. Move up to K[${ci-1}][${cw}].`, pseudo:6 });
+      ci--;
+    } else {
+      selected.add(ci-1); // 0-indexed
+      steps.push({ type:'traceback-include', i:ci, w:cw, desc:`Traceback: K[${ci}][${cw}]=${K[ci][cw]} ≠ K[${ci-1}][${cw}]=${K[ci-1][cw]} → <span class="pos">Item ${ci} WAS taken!</span> Move to K[${ci-1}][${cw-weights[ci-1]}].`, pseudo:7, item:ci-1 });
+      cw -= weights[ci-1];
+      ci--;
+    }
+  }
+
+  steps.push({ type:'done', i:-1, w:-1, desc:`<span class="pos">Done!</span> Optimal value = ${K[n][W]}. Selected items: ${[...selected].sort().map(x=>`Item ${x+1}`).join(', ')||'none'}.`, pseudo:8, selected:[...selected] });
+
+  state.steps = steps;
+  state.stepIdx = -1;
+  state.stats = {ops:0, includes:0, skips:0};
+  state.history = [];
+  state.selectedItems = new Set();
+  state.cellState = Array.from({length:n+1},()=>new Array(W+1).fill('empty'));
+
+  setStatus('ready');
+  updateButtons();
+  updateStepCounter();
+  renderDPTable();
+  renderItems();
+  updateKSSummary();
+  updateStats();
+  renderBFTree();
+  renderRatioSort();
+  renderGreedyVsDP();
+  renderPseudocode();
+  setExplanation(`Steps built! ${steps.length} steps for ${n} items, capacity ${W}. Press <strong>Play</strong> or <strong>Step</strong>.`);
+  document.getElementById('btn-step').disabled = false;
+  document.getElementById('btn-play').disabled = false;
+  document.getElementById('pseudo-toggle').style.display = 'block';
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PLAYBACK
+// ══════════════════════════════════════════════════════════════
+function getDelay() {
+  const v = parseInt(document.getElementById('speed-slider').value);
+  // map 1-16 to 1600ms-100ms
+  return Math.round(1600 / (v * 0.25 * 4));
+}
+
+function play() {
+  if (state.stepIdx >= state.steps.length-1) return;
+  state.playing = true;
+  setStatus('playing');
+  updateButtons();
+  scheduleNext();
+}
+
+function scheduleNext() {
+  if (!state.playing) return;
+  if (state.stepIdx >= state.steps.length-1) { pause(); setStatus('done'); return; }
+  state.playTimer = setTimeout(() => {
+    stepOnce();
+    if (state.stepIdx < state.steps.length-1) scheduleNext();
+    else { setStatus('done'); state.playing=false; updateButtons(); }
+  }, getDelay());
+}
+
+function pause() {
+  state.playing = false;
+  clearTimeout(state.playTimer);
+  if (state.status !== 'done') setStatus('paused');
+  updateButtons();
+}
+
+function stepOnce() {
+  if (state.stepIdx >= state.steps.length-1) return;
+  state.stepIdx++;
+  applyStep(state.steps[state.stepIdx]);
+  updateStepCounter();
+}
+
+function reset() {
+  pause();
+  state.stepIdx = -1;
+  state.playing = false;
+  state.stats = {ops:0, includes:0, skips:0};
+  state.history = [];
+  state.selectedItems = new Set();
+  state.cellState = [];
+  setStatus('idle');
+  updateButtons();
+  updateStepCounter();
+  updateStats();
+  clearHistoryTable();
+  setExplanation('Press <strong>Build Steps</strong> to initialize, then <strong>Play</strong> or <strong>Step</strong> through the algorithm.');
+  document.getElementById('dp-svg').innerHTML = '';
+  document.getElementById('items-list').innerHTML = '<div class="no-items-msg">Build steps to see items</div>';
+  document.getElementById('btn-step').disabled = true;
+  document.getElementById('btn-play').disabled = true;
+  document.getElementById('pseudo-toggle').style.display = 'none';
+  document.getElementById('pseudo-overlay').style.display = 'none';
+  updateKSSummary(true);
+}
+
+function applyStep(step) {
+  // Update stats
+  if (step.type === 'include' || step.type === 'noinclude' || step.type === 'skip') {
+    state.stats.ops++;
+    if (step.action === 'include') state.stats.includes++;
+    else if (step.action === 'skip') state.stats.skips++;
+  }
+  if (step.type === 'traceback-include') {
+    state.selectedItems.add(step.item);
+  }
+  if (step.type === 'done') {
+    step.selected.forEach(x => state.selectedItems.add(x));
+    updateKSSummary();
+  }
+
+  updateStats();
+  setExplanation(step.desc);
+  highlightPseudo(step.pseudo);
+
+  // Update cell states
+  if (step.i > 0 && step.w >= 0) {
+    const prevActive = findActiveCells();
+    prevActive.forEach(([ri,rw]) => {
+      if (state.cellState[ri] && state.cellState[ri][rw] === 'computing')
+        state.cellState[ri][rw] = step.type === 'include' ? 'include' : 'filled';
+    });
+    if (step.type !== 'traceback-skip' && step.type !== 'traceback-include' && step.type !== 'optimal' && step.type !== 'done') {
+      state.cellState[step.i][step.w] = 'computing';
+    }
+    if (step.type === 'traceback-skip' || step.type === 'traceback-include') {
+      state.cellState[step.i][step.w] = 'traceback';
+    }
+    if (step.type === 'optimal') {
+      // mark all filled
+      for (let r=0;r<=state.n;r++)
+        for (let c=0;c<=state.W;c++)
+          if (state.cellState[r][c] === 'computing') state.cellState[r][c] = 'filled';
+      state.cellState[step.i][step.w] = 'traceback';
+    }
+  }
+
+  renderDPTable(step);
+  renderItems();
+  addHistory(step);
+
+  if (step.type === 'done') {
+    updateKSSummary();
+    renderGreedyVsDP();
+    renderRatioSort();
+  }
+}
+
+function findActiveCells() {
+  const cells = [];
+  for (let i=0;i<=state.n;i++)
+    for (let w=0;w<=state.W;w++)
+      if (state.cellState[i] && state.cellState[i][w] === 'computing') cells.push([i,w]);
+  return cells;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  DP TABLE RENDERING (SVG)
+// ══════════════════════════════════════════════════════════════
+const CELL_W = 44, CELL_H = 36, MARGIN_L = 52, MARGIN_T = 44;
+
+function renderDPTable(step) {
+  if (!state.n || !state.K.length) return;
+  const n = state.n, W = state.W;
+  const svgW = MARGIN_L + (W+1)*CELL_W + 10;
+  const svgH = MARGIN_T + (n+1)*CELL_H + 10;
+
+  const svg = document.getElementById('dp-svg');
+  svg.setAttribute('width', svgW);
+  svg.setAttribute('height', svgH);
+
+  let html = `<defs>
+    <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/>
+    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+
+  // Column headers (w values)
+  for (let w=0;w<=W;w++) {
+    const x = MARGIN_L + w*CELL_W + CELL_W/2;
+    html += `<text x="${x}" y="18" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="11">${w}</text>`;
+  }
+  html += `<text x="${MARGIN_L + (W+1)*CELL_W/2}" y="34" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">capacity →</text>`;
+
+  // Row headers (item labels)
+  for (let i=0;i<=n;i++) {
+    const y = MARGIN_T + i*CELL_H + CELL_H/2 + 4;
+    const label = i===0 ? '∅' : `I${i}`;
+    html += `<text x="${MARGIN_L-8}" y="${y}" text-anchor="end" fill="#94a3b8" font-family="JetBrains Mono" font-size="11">${label}</text>`;
+  }
+
+  // Cells
+  for (let i=0;i<=n;i++) {
+    for (let w=0;w<=W;w++) {
+      const x = MARGIN_L + w*CELL_W;
+      const y = MARGIN_T + i*CELL_H;
+      const cs = state.cellState[i] ? state.cellState[i][w] : 'empty';
+      const val = state.K[i][w];
+      const isCurrentStep = step && step.i===i && step.w===w;
+
+      let fill = '#1c2333', stroke = '#252e40', strokeW = 0.5;
+      let textColor = '#64748b';
+
+      if (cs === 'computing') { fill='#0c3a5c'; stroke='#38bdf8'; strokeW=1.5; textColor='#38bdf8'; }
+      else if (cs === 'include') { fill='#0f3d2e'; stroke='#22c55e'; strokeW=1; textColor='#22c55e'; }
+      else if (cs === 'traceback') { fill='#3d1f0a'; stroke='#fbbf24'; strokeW=1.5; textColor='#fbbf24'; }
+      else if (cs === 'filled') { fill='#1a2e1a'; stroke='#2e4a2e'; strokeW=0.5; textColor='#94a3b8'; }
+
+      // Check if selected item was decided at this cell
+      if (step && step.type === 'traceback-include' && step.i===i && step.w===w) {
+        fill='#2a1a0a'; stroke='#fb923c'; strokeW=2; textColor='#fb923c';
+      }
+
+      const displayVal = (cs==='empty' && i>0) ? '' : String(val);
+      const filter = cs==='computing'||cs==='traceback' ? ' filter="url(#glow)"' : '';
+
+      html += `<rect x="${x+1}" y="${y+1}" width="${CELL_W-2}" height="${CELL_H-2}" rx="3"
+        fill="${fill}" stroke="${stroke}" stroke-width="${strokeW}"${filter} style="transition:fill 0.25s,stroke 0.25s"/>`;
+      if (displayVal !== '') {
+        html += `<text x="${x+CELL_W/2}" y="${y+CELL_H/2+5}" text-anchor="middle"
+          fill="${textColor}" font-family="JetBrains Mono" font-size="12" font-weight="${cs==='computing'||cs==='traceback'?'700':'400'}">${displayVal}</text>`;
+      }
+
+      // Arrow for include decision
+      if (step && step.type==='include' && step.i===i && step.w===w && i>0 && w>=state.items[i-1].w) {
+        const prevW = w - state.items[i-1].w;
+        const ax = MARGIN_L + prevW*CELL_W + CELL_W/2;
+        const ay = MARGIN_T + (i-1)*CELL_H + CELL_H/2;
+        const bx = x+CELL_W/2, by = y+CELL_H/2;
+        html += `<line x1="${ax}" y1="${ay}" x2="${bx}" y2="${by}" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="4,2" opacity="0.7"/>
+          <circle cx="${ax}" cy="${ay}" r="3" fill="#22c55e" opacity="0.7"/>`;
+      }
+    }
+  }
+
+  // Highlight current row
+  if (step && step.i > 0 && step.w >= 0) {
+    const rowY = MARGIN_T + step.i*CELL_H;
+    html += `<rect x="${MARGIN_L}" y="${rowY}" width="${(W+1)*CELL_W}" height="${CELL_H}" fill="none" stroke="#38bdf8" stroke-width="0.5" opacity="0.3" rx="2"/>`;
+  }
+
+  svg.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ITEMS PANEL
+// ══════════════════════════════════════════════════════════════
+function renderItems() {
+  if (!state.items.length) return;
+  const el = document.getElementById('items-list');
+  el.innerHTML = state.items.map((item, i) => {
+    const sel = state.selectedItems.has(i);
+    const cur = state.steps[state.stepIdx] && state.steps[state.stepIdx].i === i+1;
+    return `<div class="item-box${sel?' selected glow':''}${cur?' current':''}">
+      <div class="item-box-header">
+        <span class="item-name">${item.name}</span>
+        ${sel ? '<span class="selected-badge">✓ selected</span>' : ''}
+      </div>
+      <div class="item-tags">
+        <span class="item-tag tag-w">w: ${item.w}</span>
+        <span class="item-tag tag-v">v: ${item.v}</span>
+        <span class="item-ratio">ratio: ${item.ratio}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════════
+//  KNAPSACK SUMMARY
+// ══════════════════════════════════════════════════════════════
+function updateKSSummary(clear=false) {
+  if (clear || !state.n) {
+    ['ks-n','ks-W','ks-optval','ks-items-taken','ks-complexity'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+    });
+    return;
+  }
+  document.getElementById('ks-n').textContent = state.n;
+  document.getElementById('ks-W').textContent = state.W;
+  const optVal = state.K.length ? state.K[state.n][state.W] : '—';
+  document.getElementById('ks-optval').textContent = optVal;
+  document.getElementById('ks-items-taken').textContent = state.selectedItems.size || '—';
+  document.getElementById('ks-complexity').textContent = `O(${state.n}×${state.W})=${state.n*state.W}`;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PSEUDOCODE
+// ══════════════════════════════════════════════════════════════
+const PSEUDO_LINES = [
+  { code: '<span class="kw">function</span> <span class="fn">KnapsackDP</span>(w[], v[], W, n):', tip: 'Function signature: takes weight/value arrays, capacity W, item count n', clo:'clo1' },
+  { code: '  <span class="kw">for</span> i = <span class="num">1</span> <span class="kw">to</span> n:', tip: 'Outer loop: iterate over each item i from 1 to n', clo:'clo1' },
+  { code: '    <span class="kw">for</span> w = <span class="num">0</span> <span class="kw">to</span> W:', tip: 'Inner loop: iterate over each capacity from 0 to W. Total: O(nW) cells', clo:'clo1' },
+  { code: '      <span class="kw">if</span> w[i] > w:', tip: 'Item i is too heavy: cannot include it', clo:'clo3' },
+  { code: '        K[i][w] = K[i-1][w]', tip: 'Skip item i: inherit value from previous row', clo:'clo3' },
+  { code: '      <span class="kw">else</span>:', tip: 'Item i fits: decide whether to include or exclude', clo:'clo3' },
+  { code: '        K[i][w] = <span class="fn">max</span>(K[i-1][w],', tip: 'Option 1: EXCLUDE item i → take value from row above', clo:'clo3' },
+  { code: '                    v[i] + K[i-1][w-w[i]])', tip: 'Option 2: INCLUDE item i → add value + best with remaining cap', clo:'clo3' },
+  { code: '  <span class="kw">return</span> K[n][W]  <span class="cm">// optimal value</span>', tip: 'Return the optimal value for n items with capacity W', clo:'clo1' },
+  { code: '', tip: '' },
+  { code: '<span class="cm">// Traceback: find selected items</span>', tip: 'Post-processing to find which items were chosen', clo:'clo2' },
+  { code: 'i = n; w = W', tip: 'Start from bottom-right of table', clo:'clo2' },
+  { code: '<span class="kw">while</span> i > <span class="num">0</span> <span class="kw">and</span> w > <span class="num">0</span>:', tip: 'Trace until we reach the top or run out of capacity', clo:'clo2' },
+  { code: '  <span class="kw">if</span> K[i][w] == K[i-1][w]:', tip: 'Value unchanged from row above: item i was excluded', clo:'clo2' },
+  { code: '    i = i - 1  <span class="cm">// skip item i</span>', tip: 'Move up one row, same column', clo:'clo2' },
+  { code: '  <span class="kw">else</span>: include item i', tip: 'Value differs: item i was included in optimal solution', clo:'clo2' },
+  { code: '    w = w - w[i]; i = i - 1', tip: 'Subtract item weight, move to row above', clo:'clo2' },
+];
+
+const PSEUDO_IDX_MAP = [2, 1, 3, 6, 3, 6, 6, 6, 8, 11, 14, 15]; // step.pseudo → line index
+
+function renderPseudocode() {
+  const body = document.getElementById('pseudo-body');
+  body.innerHTML = PSEUDO_LINES.map((line, i) => `
+    <div class="pseudo-line" id="pline-${i}">
+      <span class="ln">${i+1}</span>
+      <span class="code">${line.code}${line.clo?`<span class="clo-badge ${line.clo}">${line.clo.toUpperCase()}</span>`:''}</span>
+      ${line.tip ? `<div class="pseudo-tooltip">${line.tip}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function highlightPseudo(pseudoIdx) {
+  document.querySelectorAll('.pseudo-line').forEach(el => el.classList.remove('highlighted'));
+  const lineIdx = PSEUDO_IDX_MAP[Math.min(pseudoIdx, PSEUDO_IDX_MAP.length-1)];
+  const el = document.getElementById(`pline-${lineIdx}`);
+  if (el) {
+    el.classList.add('highlighted');
+    el.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  BRUTE FORCE TREE (CLO-1)
+// ══════════════════════════════════════════════════════════════
+function renderBFTree() {
+  const items = state.items.slice(0, Math.min(4, state.n));
+  const n = items.length;
+  const svg = document.getElementById('bf-svg');
+  const W = state.W;
+
+  // Update complexity numbers
+  document.getElementById('bf-ops-count').textContent = `${(1<<20).toLocaleString()} ops (n=20)`;
+  document.getElementById('dp-ops-count').textContent = `${20*100} ops (n=20,W=100)`;
+
+  if (!n) { svg.innerHTML = '<text x="50" y="50" fill="#64748b" font-family="JetBrains Mono" font-size="12">Build steps first</text>'; return; }
+
+  const levels = n+1;
+  const totalNodes = (1<<levels)-1;
+  const svgH = 40 + levels*60;
+  const svgW = 760;
+  svg.setAttribute('height', svgH);
+
+  // Build tree nodes via BFS
+  // node: {level, idx, x, y, included[], weight, value, feasible}
+  function buildNode(level, posInLevel, includedSoFar, w, v) {
+    const nodesAtLevel = 1<<level;
+    const xSpan = svgW;
+    const x = (posInLevel+0.5) * xSpan / nodesAtLevel;
+    const y = 30 + level * 55;
+    return { level, posInLevel, x, y, w, v, inc: [...includedSoFar], feasible: w<=W };
+  }
+
+  let nodes = [], edges = [];
+  const queue = [{level:0, pos:0, inc:[], w:0, v:0}];
+  while (queue.length) {
+    const {level, pos, inc, w, v} = queue.shift();
+    const node = buildNode(level, pos, inc, w, v);
+    nodes.push(node);
+    if (level < n) {
+      const item = items[level];
+      // left = include
+      const lw = w+item.w, lv = v+item.v;
+      const lNode = buildNode(level+1, pos*2, [...inc, level], lw, lv);
+      const rNode = buildNode(level+1, pos*2+1, inc, w, v);
+      edges.push({ x1:node.x, y1:node.y, x2:lNode.x, y2:lNode.y, type:'include' });
+      edges.push({ x1:node.x, y1:node.y, x2:rNode.x, y2:rNode.y, type:'exclude' });
+      queue.push({level:level+1, pos:pos*2, inc:[...inc,level], w:lw, v:lv});
+      queue.push({level:level+1, pos:pos*2+1, inc, w, v});
+    }
+  }
+
+  let html = '';
+  // Draw edges
+  edges.forEach(e => {
+    const col = e.type==='include' ? '#22c55e' : '#475569';
+    html += `<line x1="${e.x1}" y1="${e.y1}" x2="${e.x2}" y2="${e.y2}" stroke="${col}" stroke-width="1.2" opacity="0.6"/>`;
+    const mx=(e.x1+e.x2)/2, my=(e.y1+e.y2)/2-4;
+    html += `<text x="${mx}" y="${my}" text-anchor="middle" fill="${col}" font-family="JetBrains Mono" font-size="9">${e.type==='include'?'✓':'✗'}</text>`;
+  });
+
+  // Draw nodes
+  const optVal = state.K[state.n][state.W];
+  nodes.forEach(nd => {
+    const isLeaf = nd.level === n;
+    const isOpt = isLeaf && nd.v === optVal && nd.w <= W;
+    let fill = isLeaf ? (nd.feasible ? '#0f3d2e' : '#3d1111') : '#1c2333';
+    let stroke = isLeaf ? (isOpt ? '#a78bfa' : (nd.feasible?'#22c55e':'#f43f5e')) : '#38bdf8';
+    if (isOpt) fill = '#2a1a5e';
+    const r = isLeaf ? 14 : 11;
+    html += `<circle cx="${nd.x}" cy="${nd.y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${isOpt?2:1}"/>`;
+    if (isLeaf) {
+      html += `<text x="${nd.x}" y="${nd.y-2}" text-anchor="middle" fill="${isOpt?'#a78bfa':(nd.feasible?'#22c55e':'#f43f5e')}" font-family="JetBrains Mono" font-size="8" font-weight="700">v=${nd.v}</text>`;
+      html += `<text x="${nd.x}" y="${nd.y+8}" text-anchor="middle" fill="${nd.feasible?'#64748b':'#f43f5e'}" font-family="JetBrains Mono" font-size="7">w=${nd.w}</text>`;
+    } else {
+      html += `<text x="${nd.x}" y="${nd.y+4}" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="9">${nd.level===0?'∅':`i${nd.level}`}</text>`;
+    }
+  });
+
+  // Level labels
+  for (let l=0;l<=n;l++) {
+    const y = 30 + l*55;
+    const label = l===0 ? 'Root' : `Decide Item ${l}`;
+    html += `<text x="8" y="${y+4}" fill="#475569" font-family="JetBrains Mono" font-size="9">${label}</text>`;
+  }
+  html += `<text x="${svgW-8}" y="${svgH-8}" text-anchor="end" fill="#a78bfa" font-family="JetBrains Mono" font-size="10">● Optimal leaf(s)</text>`;
+  html += `<text x="${svgW-8}" y="${svgH-18}" text-anchor="end" fill="#22c55e" font-family="JetBrains Mono" font-size="10">● Feasible leaf</text>`;
+  html += `<text x="${svgW-8}" y="${svgH-28}" text-anchor="end" fill="#f43f5e" font-family="JetBrains Mono" font-size="10">● Infeasible</text>`;
+
+  svg.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  RATIO SORT (CLO-2)
+// ══════════════════════════════════════════════════════════════
+function renderRatioSort() {
+  const el = document.getElementById('ratio-sort-viz');
+  if (!state.items.length) { el.innerHTML = '<div class="no-items-msg">Build steps first</div>'; return; }
+
+  const sorted = [...state.items].map((it,i)=>({...it,origIdx:i})).sort((a,b)=>b.ratio-a.ratio);
+
+  const svgW = 680, svgH = 90;
+  let html = `<svg width="${svgW}" height="${svgH}">`;
+
+  const bw = Math.min(80, (svgW-40) / sorted.length - 8);
+  sorted.forEach((item, i) => {
+    const x = 20 + i*(bw+8);
+    const sel = state.selectedItems.has(item.origIdx);
+    const fill = sel ? '#0f3d2e' : '#1c2333';
+    const stroke = sel ? '#22c55e' : '#252e40';
+    const textColor = sel ? '#22c55e' : '#94a3b8';
+    html += `<rect x="${x}" y="8" width="${bw}" height="62" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`;
+    html += `<text x="${x+bw/2}" y="26" text-anchor="middle" fill="${textColor}" font-family="JetBrains Mono" font-size="10" font-weight="700">${item.name.replace('Item','I')}</text>`;
+    html += `<text x="${x+bw/2}" y="40" text-anchor="middle" fill="#fbbf24" font-family="JetBrains Mono" font-size="11" font-weight="700">${item.ratio}</text>`;
+    html += `<text x="${x+bw/2}" y="53" text-anchor="middle" fill="#38bdf8" font-family="JetBrains Mono" font-size="9">w=${item.w}</text>`;
+    html += `<text x="${x+bw/2}" y="64" text-anchor="middle" fill="#22c55e" font-family="JetBrains Mono" font-size="9">v=${item.v}</text>`;
+    if (i < sorted.length-1) {
+      html += `<text x="${x+bw+4}" y="42" fill="#475569" font-family="JetBrains Mono" font-size="10">›</text>`;
+    }
+  });
+
+  html += `<text x="20" y="85" fill="#64748b" font-family="JetBrains Mono" font-size="9">Sorted by value/weight ratio (highest first). Yellow = ratio. ✓ = DP-selected.</text>`;
+  html += '</svg>';
+  el.innerHTML = html;
+
+  // Traceback SVG
+  renderTraceback();
+}
+
+function renderTraceback() {
+  if (!state.K.length) return;
+  const svg = document.getElementById('traceback-svg');
+  const n = state.n, W = state.W;
+
+  let html = '';
+  // Show simplified traceback path
+  const path = [];
+  let ci=n, cw=W;
+  while (ci>0 && cw>=0) {
+    path.push({i:ci, w:cw, included: state.K[ci][cw] !== state.K[ci-1][cw]});
+    if (state.K[ci][cw] !== state.K[ci-1][cw]) {
+      cw -= state.items[ci-1].w;
+    }
+    ci--;
+  }
+
+  const svgW = parseInt(svg.getAttribute('width'));
+  const bw = Math.min(90, (svgW-40) / (path.length||1) - 10);
+
+  path.forEach((step, i) => {
+    const x = 20 + i*(bw+10);
+    const fill = step.included ? '#3d1f0a' : '#1c2333';
+    const stroke = step.included ? '#fbbf24' : '#38bdf8';
+    html += `<rect x="${x}" y="20" width="${bw}" height="50" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`;
+    html += `<text x="${x+bw/2}" y="38" text-anchor="middle" fill="#e2e8f0" font-family="JetBrains Mono" font-size="10" font-weight="700">K[${step.i}][${step.w}]</text>`;
+    html += `<text x="${x+bw/2}" y="52" text-anchor="middle" fill="${stroke}" font-family="JetBrains Mono" font-size="10">${state.K[step.i][step.w]}</text>`;
+    html += `<text x="${x+bw/2}" y="64" text-anchor="middle" fill="${step.included?'#fbbf24':'#64748b'}" font-family="JetBrains Mono" font-size="9">${step.included?'✓ I'+step.i:'✗'}</text>`;
+    if (i < path.length-1) {
+      html += `<text x="${x+bw+5}" y="48" fill="#475569" font-family="JetBrains Mono" font-size="14">←</text>`;
+    }
+  });
+
+  if (!path.length) {
+    html += `<text x="20" y="50" fill="#64748b" font-family="JetBrains Mono" font-size="12">Build & run steps to see traceback path</text>`;
+  }
+
+  svg.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  GREEDY vs DP (CLO-3)
+// ══════════════════════════════════════════════════════════════
+function renderGreedyVsDP() {
+  if (!state.items.length) return;
+
+  const items = state.items;
+  const W = state.W;
+
+  // Greedy: sort by ratio, take greedily
+  const sorted = [...items].map((it,i)=>({...it,idx:i})).sort((a,b)=>b.ratio-a.ratio);
+  let gw=0, gv=0, greedy_sel=new Set();
+  for (const it of sorted) {
+    if (gw + it.w <= W) { gw+=it.w; gv+=it.v; greedy_sel.add(it.idx); }
+  }
+
+  const optVal = state.K[state.n][state.W];
+  const greedyFails = gv < optVal;
+
+  document.getElementById('greedy-result-bad').innerHTML = `
+    <div style="margin-bottom:8px">Items: ${greedy_sel.size ? [...greedy_sel].sort().map(i=>`<code>I${i+1}(w=${items[i].w},v=${items[i].v})</code>`).join(' + ') : 'none'}</div>
+    <div>Total weight: <strong style="color:var(--accent)">${gw}/${W}</strong></div>
+    <div>Total value: <strong style="color:${greedyFails?'var(--red)':'var(--green)'}">${gv}</strong></div>
+    ${greedyFails ? '<div style="color:var(--red);margin-top:6px;font-weight:700">⚠ Suboptimal! Greedy failed here.</div>' : '<div style="color:var(--green);margin-top:6px">✓ Same as DP (greedy happened to work)</div>'}
+  `;
+  document.getElementById('greedy-result-good').innerHTML = `
+    <div style="margin-bottom:8px">Items: ${state.selectedItems.size ? [...state.selectedItems].sort().map(i=>`<code>I${i+1}(w=${items[i].w},v=${items[i].v})</code>`).join(' + ') : 'Run traceback first'}</div>
+    <div>Optimal value: <strong style="color:var(--green)">${optVal}</strong></div>
+    ${greedyFails?`<div style="color:var(--green);margin-top:6px;font-weight:700">✅ DP finds +${optVal-gv} more value</div>`:''}
+  `;
+
+  // Bar chart comparison
+  const svg = document.getElementById('greedy-svg');
+  const svgW = 760, svgH = 260;
+  let html = '';
+
+  const maxV = Math.max(optVal, gv, 1);
+  const barMaxH = 140;
+
+  items.forEach((item, i) => {
+    const x = 60 + i * 80;
+    const isDP = state.selectedItems.has(i);
+    const isGreedy = greedy_sel.has(i);
+
+    // DP bar
+    const dpH = (item.v/maxV)*barMaxH;
+    html += `<rect x="${x}" y="${180-dpH}" width="28" height="${dpH}" rx="3" fill="${isDP?'#0f3d2e':'#1c2333'}" stroke="${isDP?'#22c55e':'#252e40'}" stroke-width="1.5"/>`;
+    html += `<text x="${x+14}" y="${180-dpH-5}" text-anchor="middle" fill="${isDP?'#22c55e':'#475569'}" font-family="JetBrains Mono" font-size="9">${isDP?'✓':''}</text>`;
+
+    // Greedy bar (offset)
+    const gH = (item.v/maxV)*barMaxH;
+    html += `<rect x="${x+32}" y="${180-gH}" width="28" height="${gH}" rx="3" fill="${isGreedy?'rgba(251,191,36,0.2)':'#1c2333'}" stroke="${isGreedy?'#fbbf24':'#252e40'}" stroke-width="1.5"/>`;
+    html += `<text x="${x+46}" y="${180-gH-5}" text-anchor="middle" fill="${isGreedy?'#fbbf24':'#475569'}" font-family="JetBrains Mono" font-size="9">${isGreedy?'✓':''}</text>`;
+
+    // Label
+    html += `<text x="${x+30}" y="200" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="10">${item.name.replace('Item','I')}</text>`;
+    html += `<text x="${x+30}" y="213" text-anchor="middle" fill="#64748b" font-family="JetBrains Mono" font-size="9">v=${item.v},w=${item.w}</text>`;
+  });
+
+  // Totals
+  const dpBarX = 60 + items.length*80 + 20;
+  const dpTotalH = (optVal/maxV)*barMaxH;
+  const gTotalH = (gv/maxV)*barMaxH;
+  html += `<rect x="${dpBarX}" y="${180-dpTotalH}" width="32" height="${dpTotalH}" rx="3" fill="#0f3d2e" stroke="#22c55e" stroke-width="2"/>`;
+  html += `<text x="${dpBarX+16}" y="${180-dpTotalH-8}" text-anchor="middle" fill="#22c55e" font-family="JetBrains Mono" font-size="11" font-weight="700">${optVal}</text>`;
+  html += `<rect x="${dpBarX+36}" y="${180-gTotalH}" width="32" height="${gTotalH}" rx="3" fill="${greedyFails?'rgba(244,63,94,0.2)':'rgba(34,197,94,0.2)'}" stroke="${greedyFails?'#f43f5e':'#22c55e'}" stroke-width="2"/>`;
+  html += `<text x="${dpBarX+52}" y="${180-gTotalH-8}" text-anchor="middle" fill="${greedyFails?'#f43f5e':'#22c55e'}" font-family="JetBrains Mono" font-size="11" font-weight="700">${gv}</text>`;
+  html += `<text x="${dpBarX+34}" y="200" text-anchor="middle" fill="#94a3b8" font-family="JetBrains Mono" font-size="10">TOTAL</text>`;
+
+  // Legend
+  html += `<rect x="20" y="225" width="12" height="10" rx="2" fill="#0f3d2e" stroke="#22c55e" stroke-width="1"/>`;
+  html += `<text x="36" y="234" fill="#22c55e" font-family="JetBrains Mono" font-size="10">DP (optimal)</text>`;
+  html += `<rect x="130" y="225" width="12" height="10" rx="2" fill="rgba(251,191,36,0.2)" stroke="#fbbf24" stroke-width="1"/>`;
+  html += `<text x="146" y="234" fill="#fbbf24" font-family="JetBrains Mono" font-size="10">Greedy (ratio sort)</text>`;
+  if (greedyFails) {
+    html += `<text x="280" y="234" fill="#f43f5e" font-family="JetBrains Mono" font-size="11" font-weight="700">⚠ Greedy suboptimal by ${optVal-gv}</text>`;
+  }
+
+  svg.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════════════════════
+function setStatus(s) {
+  state.status = s;
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-text');
+  dot.className = `status-dot ${s}`;
+  txt.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function updateButtons() {
+  const { status, stepIdx, steps } = state;
+  const hasSteps = steps.length > 0;
+  const atEnd = stepIdx >= steps.length-1;
+  document.getElementById('btn-step').disabled = !hasSteps || atEnd || state.playing;
+  document.getElementById('btn-play').disabled = !hasSteps || atEnd || state.playing;
+  document.getElementById('btn-pause').disabled = !state.playing;
+}
+
+function updateStepCounter() {
+  document.getElementById('step-counter').textContent = `Step ${state.stepIdx+1} / ${state.steps.length}`;
+}
+
+function updateStats() {
+  document.getElementById('stat-ops').textContent = state.stats.ops;
+  document.getElementById('stat-includes').textContent = state.stats.includes;
+  document.getElementById('stat-skips').textContent = state.stats.skips;
+  if (state.K.length) document.getElementById('stat-optimal').textContent = state.K[state.n]?.[state.W] ?? '—';
+}
+
+function setExplanation(html) {
+  document.getElementById('explanation').innerHTML = html;
+}
+
+function addHistory(step) {
+  const tbody = document.getElementById('history-body');
+  const tag = step.type.includes('include') ? `<span class="tag-fill">include</span>` :
+              step.type.includes('traceback') ? `<span class="tag-trace">traceback</span>` :
+              `<span class="tag-skip">skip</span>`;
+  const row = document.createElement('tr');
+  row.innerHTML = `<td>${state.stepIdx+1}</td><td>${step.i>0?step.i:'—'}</td><td>${step.w>=0?step.w:'—'}</td><td>${tag}</td><td>${step.val!==undefined?step.val:'—'}</td>`;
+  row.dataset.step = state.stepIdx;
+  row.onclick = () => jumpToStep(parseInt(row.dataset.step));
+
+  tbody.insertBefore(row, tbody.firstChild);
+  // Keep last 25
+  while (tbody.children.length > 25) tbody.removeChild(tbody.lastChild);
+
+  // Highlight active
+  document.querySelectorAll('#history-body tr').forEach(r => r.classList.remove('active-row'));
+  row.classList.add('active-row');
+}
+
+function clearHistoryTable() {
+  document.getElementById('history-body').innerHTML = '';
+}
+
+function jumpToStep(idx) {
+  // Rebuild from scratch to target step
+  const target = idx;
+  reset();
+  buildSteps();
+  for (let i=0; i<=target; i++) {
+    if (i < state.steps.length) {
+      state.stepIdx = i;
+      applyStep(state.steps[i]);
+    }
+  }
+  updateStepCounter();
+  updateButtons();
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function toggleCollapsible(header) {
+  header.classList.toggle('open');
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// Speed slider
+document.getElementById('speed-slider').addEventListener('input', function() {
+  const v = parseInt(this.value);
+  const speed = (v * 0.25).toFixed(2).replace(/\.?0+$/, '');
+  document.getElementById('speed-label').textContent = speed + '×';
+});
+
+// ══════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════
+renderPseudocode();
+renderBFTree();
+// Initial render with preset 0
+loadPreset(0);
+buildSteps();
+</script>
+</body>
+</html>
