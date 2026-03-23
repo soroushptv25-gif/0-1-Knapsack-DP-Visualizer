@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<!--
+=======================================================================
+  FILE 1: index.html — PAGE STRUCTURE (HTML)
+=======================================================================
+  WHAT THIS FILE DOES:
+  --------------------
+  This is the skeleton of the entire page. It defines WHAT exists on
+  the screen — panels, buttons, tabs, tables — but NOT how they look
+  (that's CSS) or how they behave (that's JavaScript).
+
+  STRUCTURE OVERVIEW:
+  -------------------
+  <header>             ← Top bar with title + CLO badge
+  <div.main-layout>    ← Two-column grid: left panel + right panel
+    <div.left-panel>   ← Controls, input, stats, explanation, history
+    <div.right-panel>  ← Tabs: DP Table | Brute Force | Ratio Sort | Greedy vs DP | Learn
+  <div#pseudo-overlay> ← Floating pseudocode popup (fixed position)
+=======================================================================
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>0/1 Knapsack — Dynamic Programming Visualizer</title>
+
+  <!--
+    GOOGLE FONTS — Two typefaces are imported:
+    - "JetBrains Mono" → used for code, numbers, pseudocode (monospace = equal-width chars)
+    - "Syne"           → used for UI labels, buttons, headings (distinctive modern sans-serif)
+  -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- All visual styling is in a separate file -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     HEADER BAR
+     - Sticky (stays at top while scrolling)
+     - Shows title and CLO badge
+     - Styled with gradient background in CSS
+═══════════════════════════════════════════════════════ -->
+<header>
+  <h1>0/1 Knapsack <span>DP Visualizer</span></h1>
+  <div class="header-badge">CLO-1 · CLO-2 · CLO-3</div>
+</header>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN LAYOUT: Two-column CSS Grid
+     - Left column: fixed 420px wide (controls)
+     - Right column: fills remaining space (visualization)
+     - On screens < 980px: switches to single column
+═══════════════════════════════════════════════════════ -->
+<div class="main-layout">
+
+
+  <!-- ════════════════════════════════
+       LEFT PANEL — CONTROL SIDE
+  ════════════════════════════════ -->
+  <div class="left-panel">
+
+
+    <!-- SECTION 1: Status Bar
+         Shows current state (Idle/Ready/Playing/Paused/Done)
+         and "Step X / Y" counter.
+         JavaScript updates these via IDs: status-dot, status-text, step-counter -->
+    <div class="panel-section">
+      <div class="status-bar">
+        <div class="status-indicator">
+          <div class="status-dot idle" id="status-dot"></div>
+          <span id="status-text">Idle</span>
+        </div>
+        <div class="step-counter" id="step-counter">Step 0 / 0</div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 2: Input Panel
+         - Two text inputs for weights and values (comma-separated)
+         - One number input for knapsack capacity W
+         - Four preset buttons that load example datasets
+         All inputs are read by parseInput() in JavaScript -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot"></div>Input</div>
+      <div class="panel-body">
+        <div class="input-row">
+          <div>
+            <label>Weights (comma-separated)</label>
+            <input type="text" id="inp-weights" value="2,3,4,5" placeholder="e.g. 2,3,4,5">
+          </div>
+          <div>
+            <label>Values (comma-separated)</label>
+            <input type="text" id="inp-values" value="3,4,5,6" placeholder="e.g. 3,4,5,6">
+          </div>
+        </div>
+        <div class="cap-row">
+          <label>Knapsack Capacity (W)</label>
+          <input type="number" id="inp-capacity" value="5" min="1" max="30">
+        </div>
+        <!-- Each preset calls loadPreset(index) in JavaScript -->
+        <div class="presets">
+          <button class="preset-btn" onclick="loadPreset(0)">📦 Classic 4-item</button>
+          <button class="preset-btn" onclick="loadPreset(1)">⚠️ Greedy Fails</button>
+          <button class="preset-btn" onclick="loadPreset(2)">🎯 Tight Fit</button>
+          <button class="preset-btn" onclick="loadPreset(3)">🧮 Larger Set</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 3: Speed Slider
+         Range: 1 to 16 (maps to 0.25× to 4× speed)
+         JavaScript converts slider value → delay in milliseconds
+         The label (#speed-label) updates live via an event listener -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot" style="background:var(--yellow)"></div>Speed</div>
+      <div class="panel-body">
+        <div class="speed-row">
+          <span style="font-size:11px;color:var(--text3)">0.25×</span>
+          <input type="range" id="speed-slider" min="1" max="16" value="4" step="1">
+          <span style="font-size:11px;color:var(--text3)">4×</span>
+          <span class="speed-label" id="speed-label">1×</span>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 4: Playback Buttons
+         Order required by spec: Build Steps, Step, Play, Pause, Reset
+         - Build Steps → buildSteps() — generates all animation steps
+         - Step        → stepOnce()  — advance one step manually
+         - Play        → play()      — auto-advance with setTimeout loop
+         - Pause       → pause()     — stops the timer
+         - Reset       → reset()     — clears everything back to idle
+         Buttons are enabled/disabled by updateButtons() in JS -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot" style="background:var(--green)"></div>Playback</div>
+      <div class="panel-body">
+        <div class="btn-row">
+          <button class="btn btn-primary"   id="btn-build" onclick="buildSteps()">Build Steps</button>
+          <button class="btn btn-secondary" id="btn-step"  onclick="stepOnce()"  disabled>Step</button>
+          <button class="btn btn-green"     id="btn-play"  onclick="play()"      disabled>▶ Play</button>
+          <button class="btn btn-yellow"    id="btn-pause" onclick="pause()"     disabled>⏸ Pause</button>
+          <button class="btn btn-red"       id="btn-reset" onclick="reset()">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 5: Statistics
+         Four stat boxes — JavaScript updates these via IDs:
+         - stat-ops      → total DP cell computations
+         - stat-includes → how many "include item" decisions made
+         - stat-skips    → how many "skip/exclude" decisions made
+         - stat-optimal  → the final optimal value once found -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot" style="background:var(--purple)"></div>Statistics</div>
+      <div class="panel-body">
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Cell Computations</div>
+            <div class="stat-value" id="stat-ops">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Include Decisions</div>
+            <div class="stat-value green" id="stat-includes">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Skip Decisions</div>
+            <div class="stat-value yellow" id="stat-skips">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Optimal Value</div>
+            <div class="stat-value purple" id="stat-optimal">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 6: Step Explanation Box
+         Plain-English description of what's happening RIGHT NOW.
+         Updated by setExplanation(html) on every step.
+         Uses color-coded spans: .em (blue), .pos (green), .neg (red) -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot" style="background:var(--orange)"></div>Step Explanation</div>
+      <div class="panel-body">
+        <div class="explanation-box" id="explanation">
+          Press <strong>Build Steps</strong> to initialize, then <strong>Play</strong> or <strong>Step</strong> through the algorithm.
+        </div>
+      </div>
+    </div>
+
+
+    <!-- SECTION 7: Step History Table
+         Scrollable table showing the last 25 steps.
+         Columns: step number, item index i, capacity w, action type, computed value
+         Clicking any row calls jumpToStep(index) to rewind/fast-forward -->
+    <div class="panel-section">
+      <div class="panel-section-header"><div class="dot" style="background:var(--teal)"></div>Step History</div>
+      <div class="panel-body" style="padding:8px 0 0 0">
+        <div class="history-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>i</th>
+                <th>w</th>
+                <th>Action</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <!-- Rows injected by JavaScript addHistory() -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+  <!-- END LEFT PANEL -->
+
+
+  <!-- ════════════════════════════════
+       RIGHT PANEL — VISUALIZATION SIDE
+  ════════════════════════════════ -->
+  <div class="right-panel">
+
+    <!-- TAB NAVIGATION
+         Five tabs switch between different views.
+         Each calls switchTab('name') which toggles .active class
+         on both the button and the corresponding .tab-content div -->
+    <div class="viz-tabs">
+      <button class="tab-btn active" onclick="switchTab('dp')">DP Table</button>
+      <button class="tab-btn" onclick="switchTab('bf')">Brute Force (CLO-1)</button>
+      <button class="tab-btn" onclick="switchTab('clo2')">Ratio Sort (CLO-2)</button>
+      <button class="tab-btn" onclick="switchTab('clo3')">Greedy vs DP (CLO-3)</button>
+      <button class="tab-btn" onclick="switchTab('edu')">📖 Learn</button>
+    </div>
+
+
+    <!-- ── TAB 1: DP TABLE (main visualization) ──────────────── -->
+    <div class="tab-content active" id="tab-dp">
+
+      <!-- Color legend explaining what each cell color means -->
+      <div style="padding:10px 20px 0; border-bottom:1px solid var(--border);">
+        <div class="legend">
+          <div class="legend-item"><div class="legend-swatch swatch-empty"></div>Uncomputed</div>
+          <div class="legend-item"><div class="legend-swatch swatch-active"></div>Computing Now</div>
+          <div class="legend-item"><div class="legend-swatch swatch-include"></div>Include Item</div>
+          <div class="legend-item"><div class="legend-swatch swatch-traceback"></div>Traceback Path</div>
+          <div class="legend-item"><div class="legend-swatch swatch-optimal"></div>Filled</div>
+          <div class="legend-item"><div class="legend-swatch swatch-selected"></div>Selected Item</div>
+        </div>
+      </div>
+
+      <div class="dp-viz-area">
+        <!-- Two-column: DP table SVG on left, item boxes on right -->
+        <div class="viz-two-col" style="flex:1">
+
+          <!-- DP TABLE: SVG is drawn entirely by JavaScript renderDPTable() -->
+          <div class="dp-table-wrap" id="dp-table-wrap">
+            <svg id="dp-svg"></svg>
+            <!-- JavaScript fills this SVG with rect + text elements for each K[i][w] cell -->
+          </div>
+
+          <!-- ITEMS LIST: Boxes showing weight/value of each item -->
+          <!-- Rendered by renderItems(), glows green when selected -->
+          <div class="items-panel">
+            <div class="items-panel-title">Items</div>
+            <div id="items-list">
+              <div class="no-items-msg">Build steps to see items</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KNAPSACK SUMMARY BAR: shows n, W, optimal value, items taken, complexity -->
+        <div class="knapsack-summary" id="ks-summary">
+          <div class="ks-stat"><div class="ks-stat-val" id="ks-n">—</div><div class="ks-stat-label">Items</div></div>
+          <div class="ks-divider"></div>
+          <div class="ks-stat"><div class="ks-stat-val" id="ks-W">—</div><div class="ks-stat-label">Capacity</div></div>
+          <div class="ks-divider"></div>
+          <div class="ks-stat"><div class="ks-stat-val gold" id="ks-optval">—</div><div class="ks-stat-label">Optimal Value</div></div>
+          <div class="ks-divider"></div>
+          <div class="ks-stat"><div class="ks-stat-val green" id="ks-items-taken">—</div><div class="ks-stat-label">Items Taken</div></div>
+          <div class="ks-divider"></div>
+          <div class="ks-stat"><div class="ks-stat-val" id="ks-complexity">—</div><div class="ks-stat-label">DP Complexity</div></div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── TAB 2: BRUTE FORCE / CLO-1 ────────────────────────── -->
+    <div class="tab-content" id="tab-bf">
+      <div class="bf-viz-area">
+        <!-- Complexity comparison boxes -->
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div class="complexity-box" style="flex:1">
+            <div class="complexity-big" style="color:var(--red)">O(2ⁿ)</div>
+            <div class="complexity-label">Brute Force</div>
+          </div>
+          <div class="complexity-box" style="flex:1">
+            <div class="complexity-big" style="color:var(--green)">O(nW)</div>
+            <div class="complexity-label">DP Solution</div>
+          </div>
+          <div class="complexity-box" style="flex:2">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">For n=20, W=100:</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:13px">
+              BF: <span style="color:var(--red)"  id="bf-ops-count">1,048,576 ops</span><br>
+              DP: <span style="color:var(--green)" id="dp-ops-count">2,000 ops</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Decision tree SVG — drawn by renderBFTree() in JavaScript -->
+        <div id="bf-svg-wrap">
+          <svg id="bf-svg" width="760" height="320"></svg>
+        </div>
+
+        <!-- Explanation text below the tree -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:12px;color:var(--text2);line-height:1.7">
+          <strong style="color:var(--text)">Decision Tree for Brute Force:</strong>
+          At each node, we decide to INCLUDE (left) or EXCLUDE (right) the current item.
+          The tree has depth n, generating <strong style="color:var(--red)">2ⁿ leaf nodes</strong>.
+          For n=4 shown above, that's 16 subsets.
+          DP avoids this by reusing subproblem solutions —
+          <strong style="color:var(--green)">pseudo-polynomial O(nW)</strong>.
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── TAB 3: RATIO SORT / CLO-2 ─────────────────────────── -->
+    <div class="tab-content" id="tab-clo2">
+      <div style="flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto">
+
+        <!-- Ratio sort bar chart (rendered by renderRatioSort()) -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.07em">
+            CLO-2: Value/Weight Ratio Sort — Initial Greedy Intuition
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+            A natural first approach: sort items by <code>value/weight</code> ratio (most "efficient" first).
+            This works for the <em>fractional</em> knapsack but can
+            <strong style="color:var(--red)">fail for 0/1</strong>.
+          </div>
+          <div id="ratio-sort-viz"></div>
+          <!-- Filled by renderRatioSort() -->
+        </div>
+
+        <!-- Traceback path SVG (rendered by renderTraceback()) -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.07em">
+            DP Traceback Search
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:10px">
+            After building the DP table, we trace back from <code>K[n][W]</code> to find which items were selected.
+          </div>
+          <svg id="traceback-svg" width="700" height="180"></svg>
+          <!-- Filled by renderTraceback() -->
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── TAB 4: GREEDY vs DP / CLO-3 ───────────────────────── -->
+    <div class="tab-content" id="tab-clo3">
+      <div class="greedy-wrap">
+
+        <!-- Explainer text -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:12px;font-weight:700;margin-bottom:6px">CLO-3: Counterexample Where Greedy Fails</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">
+            Try the <strong>⚠️ Greedy Fails</strong> preset to see a case where greedy by ratio is suboptimal.
+          </div>
+        </div>
+
+        <!-- Side-by-side comparison: greedy result vs DP result -->
+        <div class="greedy-compare">
+          <div class="greedy-panel">
+            <div class="greedy-panel-title bad">❌ Greedy (by ratio) Result</div>
+            <div id="greedy-result-bad" style="font-size:12px;color:var(--text2)">Build steps first.</div>
+          </div>
+          <div class="greedy-panel">
+            <div class="greedy-panel-title good">✅ DP Optimal Result</div>
+            <div id="greedy-result-good" style="font-size:12px;color:var(--text2)">Build steps first.</div>
+          </div>
+        </div>
+
+        <!-- Bar chart SVG comparing items selected by greedy vs DP -->
+        <div id="greedy-svg-wrap">
+          <svg id="greedy-svg" width="760" height="260"></svg>
+        </div>
+
+        <!-- Recurrence formula display -->
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">DP Include/Exclude Recurrence</div>
+          <div class="formula-box">
+            <span class="var">K[i][w]</span> <span class="op">=</span><br>
+            &nbsp;&nbsp;<span class="op">if</span> w<sub>i</sub> <span class="op">></span> w:
+              &nbsp;<span class="var">K[i-1][w]</span>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <span style="color:var(--text3)">// can't include item i</span><br>
+            &nbsp;&nbsp;<span class="op">else:</span>
+              &nbsp;&nbsp;<span class="op">max</span>( <span class="var">K[i-1][w]</span>,
+              <span class="val">v<sub>i</sub></span> <span class="op">+</span>
+              <span class="var">K[i-1][w-w<sub>i</sub>]</span> )
+              &nbsp;
+              <span style="color:var(--text3)">// exclude vs include</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── TAB 5: EDUCATIONAL CONTENT ────────────────────────── -->
+    <div class="tab-content" id="tab-edu">
+      <div class="edu-area">
+
+        <!-- COLLAPSIBLE SECTION 1: Overview -->
+        <div class="edu-section">
+          <div class="collapsible-header open" onclick="toggleCollapsible(this)">
+            <span>📚 Algorithm Overview</span><span class="arrow">▼</span>
+          </div>
+          <div class="collapsible-body open">
+            <p>The <strong>0/1 Knapsack Problem</strong> asks: given n items each with weight wᵢ and value vᵢ,
+            and a knapsack of capacity W, which items should you take to maximize total value without
+            exceeding capacity? Each item is either fully taken (1) or not (0).</p>
+            <div class="complexity-row">
+              <div class="complexity-box"><div class="complexity-big" style="color:var(--red)">O(2ⁿ)</div><div class="complexity-label">Brute Force</div></div>
+              <div class="complexity-box"><div class="complexity-big" style="color:var(--green)">O(nW)</div><div class="complexity-label">Dynamic Programming</div></div>
+            </div>
+            <div class="concept-box" style="margin-top:12px">
+              <strong>Why DP works:</strong> This problem has <em>optimal substructure</em> and
+              <em>overlapping subproblems</em> — the two conditions needed for DP.
+            </div>
+            <div class="concept-box warning">
+              <strong>Pseudo-polynomial:</strong> O(nW) is not truly polynomial — if W = 2ⁿ,
+              DP is no better than brute force.
+            </div>
+          </div>
+        </div>
+
+        <!-- COLLAPSIBLE SECTION 2: Worked Example -->
+        <div class="edu-section">
+          <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <span>🔍 Worked Example</span><span class="arrow">▼</span>
+          </div>
+          <div class="collapsible-body">
+            <p style="margin-bottom:10px">Items: {A: w=2,v=3}, {B: w=3,v=4}, {C: w=4,v=5}, {D: w=5,v=6}. Capacity W=5.</p>
+            <div class="worked-step">
+              <div class="worked-step-num">1</div>
+              <div class="worked-step-text">Initialize <code>K[0][w] = 0</code> for all w. Base case: 0 items = 0 value.</div>
+            </div>
+            <div class="worked-step">
+              <div class="worked-step-num">2</div>
+              <div class="worked-step-text">Item A (w=2, v=3): For w≥2: <code>max(0, 3+K[0][w-2]) = 3</code>.</div>
+            </div>
+            <div class="worked-step">
+              <div class="worked-step-num">3</div>
+              <div class="worked-step-text">Item B (w=3, v=4): At w=5: <code>max(3, 4+3) = 7</code>. A+B fit!</div>
+            </div>
+            <div class="worked-step">
+              <div class="worked-step-num">4</div>
+              <div class="worked-step-text">Traceback: K[4][5]→K[3][5]→K[2][5]≠K[1][5] → B included → K[1][2]≠K[0][2] → A included.</div>
+            </div>
+            <div class="worked-step">
+              <div class="worked-step-num">5</div>
+              <div class="worked-step-text">Selected: A (w=2,v=3) + B (w=3,v=4). Total weight=5. Total value=7. ✅</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLLAPSIBLE SECTION 3: Key Concepts -->
+        <div class="edu-section">
+          <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <span>💡 Key Concepts</span><span class="arrow">▼</span>
+          </div>
+          <div class="collapsible-body">
+            <div class="concept-box"><strong>Optimal Substructure:</strong> The best answer for K[i][w] uses best answers to smaller subproblems.</div>
+            <div class="concept-box"><strong>Overlapping Subproblems:</strong> Without memoization, K[i][w] is recomputed exponentially many times.</div>
+            <div class="concept-box tip"><strong>Traceback:</strong> The DP table stores values, not decisions. Traceback recovers which items were chosen.</div>
+            <div class="concept-box warning"><strong>Common Mistake:</strong> Greedy ratio sort works for fractional knapsack, NOT for 0/1.</div>
+            <div class="concept-box"><strong>Space Optimization:</strong> Since row i only needs row i-1, space can be reduced to O(W) with a 1D rolling array.</div>
+          </div>
+        </div>
+
+        <!-- COLLAPSIBLE SECTION 4: Pseudocode -->
+        <div class="edu-section">
+          <div class="collapsible-header" onclick="toggleCollapsible(this)">
+            <span>📊 Pseudocode &amp; Recurrence</span><span class="arrow">▼</span>
+          </div>
+          <div class="collapsible-body">
+            <div class="formula-box" style="line-height:2">
+              <span class="op">function</span> <span style="color:var(--yellow)">KnapsackDP</span>(weights, values, W, n):<br>
+              &nbsp;&nbsp;<span class="op">for</span> <span class="var">i</span> = 1 to n:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="op">for</span> <span class="var">w</span> = 0 to W:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">if</span> weights[i] &gt; w:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;K[i][w] = K[i-1][w]<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="op">else</span>:<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;K[i][w] = <span class="op">max</span>(K[i-1][w], values[i] + K[i-1][w-weights[i]])<br>
+              &nbsp;&nbsp;<span class="op">return</span> K[n][W]
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <!-- END TAB CONTENTS -->
+
+  </div>
+  <!-- END RIGHT PANEL -->
+
+</div>
+<!-- END MAIN LAYOUT -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FLOATING PSEUDOCODE OVERLAY
+     Fixed position, bottom-right corner.
+     Toggle button shows/hides this popup.
+     The pseudo-body is filled by renderPseudocode() in JS.
+═══════════════════════════════════════════════════════ -->
+<div id="pseudo-overlay" style="display:none;position:fixed;bottom:20px;right:20px;width:320px;z-index:200">
+  <div class="pseudo-panel" style="max-height:320px">
+    <div class="pseudo-header" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Pseudocode</span>
+      <button onclick="document.getElementById('pseudo-overlay').style.display='none'"
+              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px">×</button>
+    </div>
+    <div class="pseudo-body" id="pseudo-body">
+      <!-- Lines injected by renderPseudocode() in JavaScript -->
+    </div>
+  </div>
+</div>
+
+<!-- Toggle button to open pseudocode overlay -->
+<button onclick="document.getElementById('pseudo-overlay').style.display='block'"
+        id="pseudo-toggle"
+        style="display:none;position:fixed;bottom:20px;right:20px;z-index:201;
+               background:var(--bg4);border:1px solid var(--border2);color:var(--accent);
+               font-family:'Syne',sans-serif;font-weight:700;font-size:11px;
+               padding:8px 14px;border-radius:20px;cursor:pointer;">
+  { } Pseudocode
+</button>
+
+
+<!-- Load JavaScript last (so all DOM elements above are available) -->
+<script src="script.js"></script>
+
+</body>
+</html>
