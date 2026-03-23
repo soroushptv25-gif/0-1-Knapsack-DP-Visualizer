@@ -1,0 +1,1056 @@
+/*
+=======================================================================
+  FILE 2: styles.css — ALL VISUAL STYLING
+=======================================================================
+  WHAT THIS FILE DOES:
+  --------------------
+  Defines every color, font, size, layout rule, animation, and
+  responsive behavior. Uses CSS Custom Properties (variables) so the
+  entire color palette can be changed by editing just the :root block.
+
+  SECTIONS:
+  1.  CSS Variables (color palette)
+  2.  Reset & Body
+  3.  Header
+  4.  Two-Column Layout
+  5.  Left Panel & Panel Sections
+  6.  Status Bar
+  7.  Input Controls
+  8.  Speed Slider
+  9.  Buttons
+  10. Statistics Grid
+  11. Step Explanation Box
+  12. History Table
+  13. Right Panel & Tabs
+  14. DP Table Area
+  15. Items Panel
+  16. Knapsack Summary Bar
+  17. Pseudocode Panel
+  18. Brute Force Tab
+  19. Greedy vs DP Tab
+  20. Educational Content
+  21. Utility / Misc
+  22. Scrollbar Styling
+=======================================================================
+*/
+
+
+/* ═══════════════════════════════════════════════════════════════
+   1. CSS CUSTOM PROPERTIES — COLOR PALETTE
+   All colors defined here once, referenced everywhere as var(--name)
+   Dark theme: deep navy/slate background, bright accent colors
+═══════════════════════════════════════════════════════════════ */
+:root {
+  /* Background layers (darkest to lightest) */
+  --bg:  #0a0c10;   /* Main page background — almost black */
+  --bg2: #0f1219;   /* Left panel background */
+  --bg3: #151a24;   /* Panel section cards */
+  --bg4: #1c2333;   /* Input fields, stat boxes, code backgrounds */
+
+  /* Borders */
+  --border:  #252e40;   /* Subtle dark border */
+  --border2: #2e3a52;   /* Slightly brighter border for inputs/hover */
+
+  /* Text colors */
+  --text:  #e2e8f0;   /* Primary text — near-white */
+  --text2: #94a3b8;   /* Secondary text — muted slate */
+  --text3: #64748b;   /* Tertiary text — dim labels, line numbers */
+
+  /* Accent colors (used for highlights, active states) */
+  --accent:  #38bdf8;   /* Sky blue — primary accent */
+  --accent2: #0ea5e9;   /* Darker sky blue — button backgrounds */
+
+  /* Semantic colors */
+  --green:  #22c55e;   /* Include/success/selected items */
+  --green2: #16a34a;   /* Darker green for button backgrounds */
+  --red:    #f43f5e;   /* Error/exclude/infeasible */
+  --red2:   #be123c;   /* Darker red for button backgrounds */
+  --yellow: #fbbf24;   /* Traceback/warnings/ratio values */
+  --yellow2:#d97706;
+  --purple: #a78bfa;   /* Optimal value/CLO badges */
+  --purple2:#7c3aed;
+  --orange: #fb923c;   /* Explanation box accent */
+  --teal:   #2dd4bf;   /* History section accent */
+
+  /* DP Table cell colors — what each cell "state" looks like */
+  --cell-empty:     #1c2333;  /* Not yet computed */
+  --cell-active:    #0c3a5c;  /* Currently being computed (blue tint) */
+  --cell-filled:    #0f3d2e;  /* Computed — item was included (green tint) */
+  --cell-traceback: #3d1f0a;  /* On the traceback path (orange tint) */
+  --cell-optimal:   #1a3a1a;  /* Computed — item was skipped (dim green) */
+
+  /* Shadow */
+  --shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   2. RESET & BODY
+   - box-sizing: border-box means padding/borders are INCLUDED in
+     width/height calculations (avoids layout surprises)
+   - margin/padding reset ensures no browser defaults sneak in
+═══════════════════════════════════════════════════════════════ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden; /* Prevents horizontal scrollbar from wide SVGs */
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   3. HEADER BAR
+   - position: sticky + top: 0 → stays visible when scrolling
+   - z-index: 100 → floats above all content
+   - gradient background adds subtle depth
+═══════════════════════════════════════════════════════════════ */
+header {
+  background: linear-gradient(135deg, #0a0c10 0%, #0f1a2e 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Title left, badge right */
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+header h1 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em; /* Tight tracking for display heading */
+}
+
+/* The word "DP Visualizer" is wrapped in <span> to get accent color */
+header h1 span { color: var(--accent); }
+
+/* Pill badge "CLO-1 · CLO-2 · CLO-3" in top-right */
+.header-badge {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  padding: 4px 12px;
+  border-radius: 20px;  /* Pill shape */
+  font-size: 11px;
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   4. TWO-COLUMN LAYOUT
+   - CSS Grid with fixed left (420px) + flexible right (1fr)
+   - min-height fills the screen below the header
+   - Media query collapses to single column on small screens
+═══════════════════════════════════════════════════════════════ */
+.main-layout {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  gap: 0;
+  min-height: calc(100vh - 57px); /* 57px = header height */
+}
+
+/* RESPONSIVE: Single column on screens narrower than 980px */
+@media (max-width: 980px) {
+  .main-layout { grid-template-columns: 1fr; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   5. LEFT PANEL & PANEL SECTIONS
+   - flex column with gap creates vertical stack of cards
+   - Each card (.panel-section) has header + body pattern
+═══════════════════════════════════════════════════════════════ */
+.left-panel {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  overflow-y: auto;         /* Scroll if content taller than screen */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Individual card container */
+.panel-section {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;         /* So child elements respect border-radius */
+}
+
+/* Dark header bar inside each card (e.g. "INPUT", "SPEED") */
+.panel-section-header {
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text2);
+  background: var(--bg4);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Small colored dot in panel headers */
+.panel-section-header .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Content area inside each card */
+.panel-body { padding: 14px; }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   6. STATUS BAR
+   - Shows colored dot + status text on the left
+   - Step counter on the right
+   - Dot animates (pulsing glow) when playing
+═══════════════════════════════════════════════════════════════ */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* The small colored circle */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text3);
+  transition: background 0.3s;
+}
+
+/* Each status gets a color + optional glow shadow */
+.status-dot.idle    { background: var(--text3); }
+.status-dot.ready   { background: var(--accent);  box-shadow: 0 0 8px var(--accent); }
+.status-dot.playing { background: var(--green);   box-shadow: 0 0 8px var(--green); animation: pulse 1s infinite; }
+.status-dot.paused  { background: var(--yellow);  box-shadow: 0 0 8px var(--yellow); }
+.status-dot.done    { background: var(--purple);  box-shadow: 0 0 8px var(--purple); }
+
+/* Pulsing animation for "playing" state */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+.step-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   7. INPUT CONTROLS
+   Labels + text/number inputs with focus highlight
+═══════════════════════════════════════════════════════════════ */
+label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: block;
+  margin-bottom: 5px;
+}
+
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+/* Blue glow on focus */
+input[type="text"]:focus,
+input[type="number"]:focus { border-color: var(--accent); }
+
+/* Two-column grid for weights + values inputs side by side */
+.input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.cap-row { margin-bottom: 10px; }
+
+/* Preset buttons row — wraps onto multiple lines if needed */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preset-btn {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: var(--text2);
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  background: var(--bg3);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   8. SPEED SLIDER
+   Custom-styled range input — browser defaults are ugly
+═══════════════════════════════════════════════════════════════ */
+.speed-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The track (the bar) */
+input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;   /* Remove default browser styling */
+  height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  outline: none;
+}
+
+/* The thumb (the draggable circle) */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.speed-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  min-width: 36px;
+  text-align: right;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   9. BUTTONS
+   Base .btn class + modifier classes for color variants
+═══════════════════════════════════════════════════════════════ */
+.btn-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Base button — shared by all button types */
+.btn {
+  flex: 1;
+  min-width: 60px;
+  padding: 8px 6px;
+  border-radius: 7px;
+  border: 1px solid var(--border2);
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+
+/* Blue — Build Steps */
+.btn-primary  { background: var(--accent2); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent); box-shadow: 0 0 12px rgba(56,189,248,0.3); }
+
+/* Gray — Step */
+.btn-secondary { background: var(--bg4); color: var(--text2); }
+.btn-secondary:hover { background: var(--bg3); border-color: var(--text2); color: var(--text); }
+
+/* Green — Play */
+.btn-green { background: var(--green2); border-color: var(--green); color: #fff; }
+.btn-green:hover { background: var(--green); box-shadow: 0 0 12px rgba(34,197,94,0.3); }
+
+/* Yellow/amber — Pause */
+.btn-yellow { background: #92400e; border-color: var(--yellow); color: var(--yellow); }
+.btn-yellow:hover { background: #7c3a0a; }
+
+/* Red — Reset */
+.btn-red { background: var(--red2); border-color: var(--red); color: #fff; }
+.btn-red:hover { background: var(--red); }
+
+/* Disabled state — all buttons */
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   10. STATISTICS GRID
+   2x2 grid of stat boxes showing live counters
+═══════════════════════════════════════════════════════════════ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stat-box {
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 4px;
+}
+
+/* Large monospace number */
+.stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* Color variants for different stats */
+.stat-value.green  { color: var(--green); }
+.stat-value.yellow { color: var(--yellow); }
+.stat-value.purple { color: var(--purple); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   11. STEP EXPLANATION BOX
+   Blue left border marks it as the "current step" info box
+═══════════════════════════════════════════════════════════════ */
+.explanation-box {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-left: 3px solid var(--accent);  /* Distinctive blue left border */
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+  min-height: 64px;
+}
+
+/* Inline spans for colored keywords in explanations */
+.explanation-box .em  { color: var(--accent); font-weight: 700; }
+.explanation-box .pos { color: var(--green);  font-weight: 700; }
+.explanation-box .neg { color: var(--red);    font-weight: 700; }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   12. HISTORY TABLE
+   Scrollable, compact table with clickable rows
+═══════════════════════════════════════════════════════════════ */
+.history-wrap {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+/* Sticky header stays visible while scrolling */
+.history-table th {
+  background: var(--bg4);
+  padding: 5px 8px;
+  text-align: left;
+  color: var(--text3);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+
+.history-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.history-table tr:hover td        { background: var(--bg4); }
+.history-table tr.active-row td   { background: rgba(56,189,248,0.1); color: var(--accent); }
+
+/* Colored action tags inside table cells */
+.tag-fill  { background: rgba(34,197,94,0.2);  color: var(--green);  border-radius: 3px; padding: 1px 5px; font-size: 10px; }
+.tag-skip  { background: rgba(100,116,139,0.2); color: var(--text3);  border-radius: 3px; padding: 1px 5px; font-size: 10px; }
+.tag-trace { background: rgba(251,191,36,0.2);  color: var(--yellow); border-radius: 3px; padding: 1px 5px; font-size: 10px; }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   13. RIGHT PANEL & TAB SYSTEM
+═══════════════════════════════════════════════════════════════ */
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+/* Tab button bar */
+.viz-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.tab-btn {
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;  /* Bottom border used as active indicator */
+  transition: all 0.2s;
+}
+
+.tab-btn:hover  { color: var(--text2); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Tab content panels — only .active one is shown */
+.tab-content        { display: none; flex: 1; }
+.tab-content.active { display: flex; flex-direction: column; }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   14. DP TABLE AREA
+═══════════════════════════════════════════════════════════════ */
+.dp-viz-area {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Two-column layout: table left, items right */
+.viz-two-col {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 16px;
+  flex: 1;
+}
+
+/* Container for the SVG table — scrollable if large */
+.dp-table-wrap {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: auto;
+  position: relative;
+}
+
+/* The SVG element itself — block prevents inline gap */
+#dp-svg { display: block; }
+
+/* Color legend row */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text3);
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Each swatch color matches the cell state colors */
+.swatch-empty     { background: var(--cell-empty); }
+.swatch-active    { background: var(--cell-active);    border-color: var(--accent); }
+.swatch-include   { background: var(--cell-filled);    border-color: var(--green); }
+.swatch-traceback { background: var(--cell-traceback); border-color: var(--yellow); }
+.swatch-optimal   { background: var(--cell-optimal);   border-color: var(--green); }
+.swatch-selected  { background: rgba(167,139,250,0.3); border-color: var(--purple); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   15. ITEMS PANEL (right side of DP tab)
+═══════════════════════════════════════════════════════════════ */
+.items-panel {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 420px;
+}
+
+.items-panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* Each item box */
+.item-box {
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Colored left stripe — changes based on state */
+.item-box::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--border2);
+  transition: background 0.3s;
+}
+
+/* Selected item: green border + glow */
+.item-box.selected        { border-color: var(--green); background: rgba(34,197,94,0.08); }
+.item-box.selected::before { background: var(--green); }
+.item-box.glow            { box-shadow: 0 0 16px rgba(34,197,94,0.3); }
+
+/* Currently-being-processed item: blue border */
+.item-box.current        { border-color: var(--accent); background: rgba(56,189,248,0.08); }
+.item-box.current::before { background: var(--accent); }
+
+.item-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.item-name  { font-weight: 700; font-size: 12px; }
+.item-ratio { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--yellow); }
+
+.item-tags  { display: flex; gap: 6px; }
+.item-tag   { font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 2px 7px; border-radius: 4px; }
+.tag-w { background: rgba(56,189,248,0.15); color: var(--accent); }
+.tag-v { background: rgba(34,197,94,0.15);  color: var(--green); }
+
+.selected-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   16. KNAPSACK SUMMARY BAR (bottom of DP tab)
+═══════════════════════════════════════════════════════════════ */
+.knapsack-summary {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.ks-stat { text-align: center; }
+.ks-stat-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.ks-stat-val.gold  { color: var(--yellow); }
+.ks-stat-val.green { color: var(--green); }
+.ks-stat-label {
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* Thin vertical divider between stats */
+.ks-divider {
+  width: 1px;
+  height: 40px;
+  background: var(--border);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   17. PSEUDOCODE PANEL (floating overlay)
+═══════════════════════════════════════════════════════════════ */
+.pseudo-panel {
+  background: var(--bg3);       /* Slightly lighter than page bg */
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+}
+
+.pseudo-header {
+  padding: 10px 14px;
+  background: var(--bg4);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.pseudo-body {
+  overflow-y: auto;
+  padding: 8px 0;
+  flex: 1;
+  max-height: 380px;
+}
+
+/* A single line in the pseudocode */
+.pseudo-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 3px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  transition: background 0.2s;
+  cursor: pointer;
+  position: relative;
+}
+
+.pseudo-line:hover         { background: var(--bg4); }
+/* Currently executing line gets blue background + left border */
+.pseudo-line.highlighted   { background: rgba(56,189,248,0.15); border-left: 2px solid var(--accent); }
+
+/* Line number (dim, right-aligned) */
+.pseudo-line .ln {
+  color: var(--text3);
+  min-width: 24px;
+  text-align: right;
+  user-select: none;  /* Can't accidentally select line numbers */
+}
+
+.pseudo-line .code { color: var(--text); line-height: 1.5; white-space: pre-wrap; }
+
+/* Syntax coloring inside pseudocode */
+.pseudo-line .code .kw  { color: var(--accent); }   /* keywords: if, for, return */
+.pseudo-line .code .fn  { color: var(--yellow); }   /* function names */
+.pseudo-line .code .cm  { color: var(--text3); }    /* comments */
+.pseudo-line .code .num { color: var(--purple); }   /* numbers */
+
+/* Tooltip appears on hover, positioned to the right */
+.pseudo-tooltip {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text2);
+  width: 220px;
+  z-index: 50;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+
+.pseudo-line:hover .pseudo-tooltip { display: block; }
+
+/* CLO badge labels inside pseudocode */
+.clo-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.clo1 { background: rgba(56,189,248,0.2);  color: var(--accent); border: 1px solid var(--accent); }
+.clo2 { background: rgba(251,191,36,0.2);  color: var(--yellow); border: 1px solid var(--yellow); }
+.clo3 { background: rgba(167,139,250,0.2); color: var(--purple); border: 1px solid var(--purple); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   18. BRUTE FORCE TAB (CLO-1)
+═══════════════════════════════════════════════════════════════ */
+.bf-viz-area {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#bf-svg-wrap {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: auto;
+}
+
+#bf-svg { display: block; }
+
+/* Complexity comparison boxes */
+.complexity-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.complexity-box  { background: var(--bg4); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+.complexity-big  { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.complexity-label{ font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   19. GREEDY vs DP TAB (CLO-3)
+═══════════════════════════════════════════════════════════════ */
+.greedy-wrap {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Side-by-side greedy vs DP result panels */
+.greedy-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.greedy-panel {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.greedy-panel-title       { font-size: 12px; font-weight: 700; margin-bottom: 10px; }
+.greedy-panel-title.bad   { color: var(--red); }
+.greedy-panel-title.good  { color: var(--green); }
+
+#greedy-svg-wrap {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Formula display box */
+.formula-box {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.8;
+}
+
+.formula-box .var { color: var(--accent); }
+.formula-box .val { color: var(--green); }
+.formula-box .op  { color: var(--yellow); }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   20. EDUCATIONAL CONTENT TAB
+═══════════════════════════════════════════════════════════════ */
+.edu-area {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.edu-section { margin-bottom: 20px; }
+
+/* Accordion header — clicking toggles the body open/closed */
+.collapsible-header {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+
+.collapsible-header:hover           { border-color: var(--accent); }
+.collapsible-header .arrow          { transition: transform 0.3s; color: var(--text3); }
+.collapsible-header.open .arrow     { transform: rotate(180deg); }  /* Arrow flips when open */
+
+/* Accordion body — hidden by default, shown when .open added by JS */
+.collapsible-body {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  padding: 16px;
+  display: none;
+  line-height: 1.7;
+  color: var(--text2);
+  font-size: 13px;
+}
+.collapsible-body.open { display: block; }
+
+/* Highlighted concept boxes with colored left border */
+.concept-box {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-left: 3px solid var(--purple);  /* Purple = concept */
+  border-radius: 6px;
+  padding: 12px 14px;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--text2);
+}
+.concept-box.warning { border-left-color: var(--red); }   /* Red = warning/mistake */
+.concept-box.tip     { border-left-color: var(--green); } /* Green = tip */
+.concept-box strong  { color: var(--text); }
+
+/* Numbered worked example steps */
+.worked-step {
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 8px 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.worked-step-num {
+  background: var(--accent2);
+  color: #fff;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;  /* Don't let the circle shrink */
+}
+
+.worked-step-text {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+/* Inline code snippets */
+code {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--accent);
+  font-size: 11px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   21. UTILITY
+═══════════════════════════════════════════════════════════════ */
+.no-items-msg {
+  color: var(--text3);
+  font-size: 12px;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Ratio sort visualization container */
+#ratio-sort-viz {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   22. CUSTOM SCROLLBAR STYLING
+   Thin dark scrollbars that match the theme
+═══════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--bg2); }
+::-webkit-scrollbar-thumb  { background: var(--border2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
